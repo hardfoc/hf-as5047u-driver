@@ -218,7 +218,7 @@ seo:
     Portable C++20 driver for the AS5047U magnetic encoder from ams with
     14-bit absolute angle readings, optional CRC protection, Dynamic Angle
     Error Compensation (DAEC), and adaptive Dynamic Filter System (DFS™)
-  url: "https://n3b3x.github.io/hf-as5047u-driver"
+  url: "https://hardfoc.github.io/hf-as5047u-driver"
   twitter:
     card: "summary_large_image"
     site: "@n3b3x"
