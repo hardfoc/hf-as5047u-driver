@@ -12,15 +12,15 @@ This branch contains the versioned documentation for this repository.
 
 ## Access
 
-- **Latest**: [https://N3b3x.github.io/hf-as5047u-driver/](https://N3b3x.github.io/hf-as5047u-driver/)
-- **All Versions**: [https://N3b3x.github.io/hf-as5047u-driver/version_selector.html](https://N3b3x.github.io/hf-as5047u-driver/version_selector.html)
+- **Latest**: [https://hardfoc.github.io/hf-as5047u-driver/](https://hardfoc.github.io/hf-as5047u-driver/)
+- **All Versions**: [https://hardfoc.github.io/hf-as5047u-driver/version_selector.html](https://hardfoc.github.io/hf-as5047u-driver/version_selector.html)
 
 ## Current Version
 
 - **Version**: development
 - **Type**: development
-- **Deployed**: 2026-06-15T01:44:24Z
-- **Commit**: e29f8c7056aa474b9c4e5f856946dcd0409c6570
+- **Deployed**: 2026-10-31T08:14:53Z
+- **Commit**: 8b4f7a9fb1e2fa66a41b6e674e739248d324e382
 
 ---
 
