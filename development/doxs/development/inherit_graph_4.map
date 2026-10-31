@@ -1,5 +1,5 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="Node000000" href="$classas5047u_1_1SpiInterface.html" title=" " alt="" coords="5,5,196,45"/>
-<area shape="rect" id="Node000001" href="$classEsp32As5047uSpiBus.html" title="ESP32 SPI transport implementation for AS5047U driver." alt="" coords="244,13,405,38"/>
-<area shape="poly" id="edge1_Node000000_Node000001" title=" " alt="" coords="210,23,244,23,244,28,210,28"/>
+<area shape="rect" id="Node000000" href="$classas5047u_1_1SpiInterface.html" title=" " alt="" coords="5,5,196,50"/>
+<area shape="rect" id="Node000001" href="$classEsp32As5047uSpiBus.html" title="ESP32 SPI transport implementation for AS5047U driver." alt="" coords="244,14,404,42"/>
+<area shape="poly" id="edge1_Node000000_Node000001" title=" " alt="" coords="211,25,246,27,241,28,211,30"/>
 </map>

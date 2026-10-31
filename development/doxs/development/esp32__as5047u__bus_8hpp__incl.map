@@ -1,25 +1,25 @@
 <map id="examples/esp32/main/esp32_as5047u_bus.hpp" name="examples/esp32/main/esp32_as5047u_bus.hpp">
-<area shape="rect" id="Node000001" title="ESP32 SPI transport implementation for AS5047U driver (header&#45;only)" alt="" coords="509,5,694,45"/>
-<area shape="rect" id="Node000002" href="$as5047u__spi__interface_8hpp.html" title="CRTP&#45;based SPI bus interface for AS5047U driver." alt="" coords="5,93,147,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="509,42,348,66,166,96,161,97,160,92,165,91,348,60,508,37"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="151,181,217,207"/>
-<area shape="poly" id="edge9_Node000001_Node000004" title=" " alt="" coords="509,34,425,41,337,53,260,71,231,82,211,95,199,111,192,130,186,168,181,167,186,128,194,108,208,91,229,77,259,65,336,47,424,35,508,28"/>
-<area shape="rect" id="Node000005" href="$esp32__as5047u__test__config_8hpp.html" title="Hardware configuration for AS5047U driver on ESP32&#45;C6." alt="" coords="221,93,376,133"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="536,48,379,92,378,87,534,43"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="400,101,504,126"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="570,48,485,96,482,92,567,43"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="528,101,675,126"/>
-<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="604,46,604,87,599,87,599,46"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="699,101,783,126"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="633,43,712,91,709,96,631,48"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="808,101,869,126"/>
-<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="661,43,797,91,802,93,800,98,795,96,659,48"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="893,101,960,126"/>
-<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="695,42,786,64,882,91,889,93,887,98,881,96,785,69,694,48"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="984,101,1061,126"/>
-<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="695,36,827,58,973,91,983,94,981,99,971,96,826,63,694,41"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="41,181,111,207"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="79,134,79,167,73,167,73,134"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="104,131,158,171,155,175,101,136"/>
-<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="272,136,214,176,211,171,269,131"/>
+<area shape="rect" id="Node000001" title="ESP32 SPI transport implementation for AS5047U driver (header&#45;only)" alt="" coords="509,5,693,50"/>
+<area shape="rect" id="Node000002" href="$as5047u__spi__interface_8hpp.html" title="CRTP&#45;based SPI bus interface for AS5047U driver." alt="" coords="5,98,146,143"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="506,43,348,68,165,101,162,101,160,96,164,95,347,63,511,41"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="151,191,216,218"/>
+<area shape="poly" id="edge9_Node000001_Node000004" title=" " alt="" coords="506,35,425,44,337,56,260,75,231,86,211,100,198,116,191,136,185,177,180,174,185,134,194,114,207,96,228,82,258,70,336,51,424,39,511,33"/>
+<area shape="rect" id="Node000005" href="$esp32__as5047u__test__config_8hpp.html" title="Hardware configuration for AS5047U driver on ESP32&#45;C6." alt="" coords="221,98,375,143"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="526,51,386,96,384,91,531,50"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="400,106,503,134"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="568,50,487,101,485,96,563,51"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="528,106,674,134"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="603,48,603,92,599,89,599,52"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="698,106,781,134"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="635,48,709,98,704,97,633,53"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="805,106,866,134"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="667,48,794,96,799,100,794,99,792,100,666,53"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="890,106,955,134"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="694,44,784,66,879,95,886,100,880,99,877,101,783,71,693,50"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="979,106,1055,134"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="693,38,825,60,968,95,978,101,972,100,967,101,824,66,693,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="41,191,110,218"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,141,78,176,73,174,74,145"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="105,141,157,180,151,182,103,146"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="271,142,216,184,213,179,265,144"/>
 </map>

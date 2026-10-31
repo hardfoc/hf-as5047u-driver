@@ -1,5 +1,5 @@
-warning: ignoring unsupported tag 'PAGE_OUTLINE_PANEL' at line 1765, file /tmp/doxyfile.kVABQz
-warning: Tag 'DOT_TRANSPARENT' at line 2788 of file '/tmp/doxyfile.kVABQz' has become obsolete.
+warning: ignoring unsupported tag 'PAGE_OUTLINE_PANEL' at line 1765, file /tmp/doxyfile.tnAzCB
+warning: Tag 'DOT_TRANSPARENT' at line 2788 of file '/tmp/doxyfile.tnAzCB' has become obsolete.
          To avoid this warning please remove this line from your configuration file or upgrade it using "doxygen -u"
 /home/runner/work/hf-as5047u-driver/hf-as5047u-driver/examples/esp32/main/TestFramework.h:383: warning: The following parameter of print_test_section_footer(const char *tag, const char *section_name, bool enabled=true) is not documented:
   parameter 'tag'

@@ -1,72 +1,72 @@
 <map id="examples/esp32/main/configuration_example.cpp" name="examples/esp32/main/configuration_example.cpp">
-<area shape="rect" id="Node000001" title="Configuration example with ABI, UVW, and PWM setup." alt="" coords="1050,5,1253,45"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="5,174,89,199"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1050,32,914,38,742,49,554,68,365,96,289,112,214,133,92,172,90,167,212,128,288,107,364,91,553,63,742,44,913,33,1050,27"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="1625,93,1776,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="1253,38,1612,89,1611,95,1252,44"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="1801,93,1918,119"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="1253,33,1493,56,1787,91,1787,96,1492,62,1253,38"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="114,174,191,199"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="1050,35,795,55,642,73,490,96,346,127,204,169,195,172,194,167,203,164,345,121,490,91,642,68,794,50,1050,29"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="1942,93,2009,119"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="1253,28,1552,46,1739,65,1929,91,1928,96,1738,70,1552,51,1253,33"/>
-<area shape="rect" id="Node000007" href="$as5047u_8hpp.html" title="Driver for AMS AS5047U Magnetic Rotary Position Sensor (C++21)" alt="" coords="1437,93,1601,119"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="1240,43,1453,88,1452,93,1239,48"/>
-<area shape="rect" id="Node000025" href="$esp32__as5047u__bus_8hpp.html" title="ESP32 SPI transport implementation for AS5047U driver (header&#45;only)" alt="" coords="502,93,683,119"/>
-<area shape="poly" id="edge30_Node000001_Node000025" title=" " alt="" coords="1050,44,688,94,687,89,1049,38"/>
-<area shape="rect" id="Node000026" href="$esp32__as5047u__test__config_8hpp.html" title="Hardware configuration for AS5047U driver on ESP32&#45;C6." alt="" coords="655,167,810,207"/>
-<area shape="poly" id="edge41_Node000001_Node000026" title=" " alt="" coords="1103,48,796,164,794,159,1101,43"/>
-<area shape="rect" id="Node000008" href="$as5047u__spi__interface_8hpp.html" title="CRTP&#45;based SPI bus interface for AS5047U driver." alt="" coords="920,174,1116,199"/>
-<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="1445,121,1136,169,1103,174,1102,169,1135,164,1445,116"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="1122,328,1189,353"/>
-<area shape="poly" id="edge18_Node000007_Node000010" title=" " alt="" coords="1547,116,1577,136,1591,149,1602,165,1613,199,1611,230,1596,257,1570,282,1542,297,1502,310,1401,327,1293,337,1203,341,1203,336,1293,331,1400,322,1501,304,1540,292,1567,278,1592,254,1606,228,1608,200,1597,168,1587,153,1574,140,1544,121"/>
-<area shape="rect" id="Node000011" href="$as5047u__registers_8hpp.html" title="Register definitions for the AS5047U Rotary Position Sensor." alt="" coords="1711,255,1880,280"/>
-<area shape="poly" id="edge10_Node000007_Node000011" title=" " alt="" coords="1602,116,1737,138,1791,151,1820,165,1829,184,1828,205,1813,244,1808,242,1823,204,1823,185,1816,169,1789,156,1735,143,1601,121"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="1662,174,1806,199"/>
-<area shape="poly" id="edge12_Node000007_Node000012" title=" " alt="" coords="1551,116,1691,167,1689,172,1550,121"/>
-<area shape="rect" id="Node000013" title=" " alt="" coords="1881,174,1966,199"/>
-<area shape="poly" id="edge13_Node000007_Node000013" title=" " alt="" coords="1602,116,1725,136,1863,164,1876,168,1875,173,1861,169,1724,141,1601,121"/>
-<area shape="rect" id="Node000014" title=" " alt="" coords="1990,174,2046,199"/>
-<area shape="poly" id="edge14_Node000007_Node000014" title=" " alt="" coords="1602,115,1831,143,1979,164,1985,166,1983,171,1977,169,1830,149,1601,120"/>
-<area shape="rect" id="Node000015" title=" " alt="" coords="2070,174,2137,199"/>
-<area shape="poly" id="edge15_Node000007_Node000015" title=" " alt="" coords="1602,115,1614,116,1740,126,1838,130,1936,139,2059,164,2068,167,2066,172,2057,169,1935,144,1838,135,1739,131,1614,121,1601,120"/>
-<area shape="rect" id="Node000016" title=" " alt="" coords="2161,174,2219,199"/>
-<area shape="poly" id="edge16_Node000007_Node000016" title=" " alt="" coords="1602,115,1614,116,1765,125,1884,127,2001,134,2070,146,2149,164,2156,166,2155,171,2148,169,2069,151,2001,140,1884,132,1765,131,1614,121,1601,120"/>
-<area shape="rect" id="Node000017" title=" " alt="" coords="2244,174,2307,199"/>
-<area shape="poly" id="edge17_Node000007_Node000017" title=" " alt="" coords="1602,115,1614,116,1708,123,1788,126,1925,126,1991,127,2061,133,2140,144,2232,164,2240,166,2238,171,2231,169,2139,150,2060,138,1991,133,1925,131,1788,131,1708,128,1614,121,1601,120"/>
-<area shape="rect" id="Node000018" title=" " alt="" coords="834,174,895,199"/>
-<area shape="poly" id="edge19_Node000007_Node000018" title=" " alt="" coords="1437,110,1330,113,1197,122,1052,140,908,169,900,172,899,166,907,164,1051,135,1197,117,1330,108,1437,104"/>
-<area shape="rect" id="Node000019" title=" " alt="" coords="2331,174,2417,199"/>
-<area shape="poly" id="edge20_Node000007_Node000019" title=" " alt="" coords="1602,115,1614,116,1722,124,1813,127,1968,128,2043,129,2123,134,2214,145,2320,164,2332,167,2331,172,2319,169,2213,151,2123,140,2043,135,1968,133,1813,133,1721,129,1614,121,1601,120"/>
-<area shape="rect" id="Node000020" title=" " alt="" coords="1367,174,1427,199"/>
-<area shape="poly" id="edge21_Node000007_Node000020" title=" " alt="" coords="1503,121,1428,169,1425,164,1500,117"/>
-<area shape="rect" id="Node000021" href="$as5047u__types_8hpp.html" title="Type definitions for the AS5047U driver." alt="" coords="1081,255,1229,280"/>
-<area shape="poly" id="edge22_Node000007_Node000021" title=" " alt="" coords="1437,114,1365,121,1290,132,1225,147,1200,157,1182,169,1170,184,1163,203,1157,241,1152,240,1158,201,1166,182,1179,165,1197,153,1223,142,1289,126,1365,116,1437,109"/>
-<area shape="rect" id="Node000022" href="$as5047u__config_8hpp.html" title="Compile&#45;time configuration options for the AS5047U driver." alt="" coords="1192,174,1343,199"/>
-<area shape="poly" id="edge24_Node000007_Node000022" title=" " alt="" coords="1483,121,1318,172,1316,167,1482,116"/>
-<area shape="rect" id="Node000023" href="$as5047u_8ipp.html" title="Template implementation of AS5047U driver methods." alt="" coords="1451,174,1587,199"/>
-<area shape="poly" id="edge27_Node000007_Node000023" title=" " alt="" coords="1515,119,1514,160,1508,160,1510,119"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="935,255,1005,280"/>
-<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="1013,201,986,244,982,242,1009,198"/>
-<area shape="poly" id="edge9_Node000008_Node000010" title=" " alt="" coords="1025,199,1043,236,1072,278,1097,301,1123,319,1120,323,1094,305,1068,282,1038,239,1020,201"/>
-<area shape="poly" id="edge11_Node000011_Node000010" title=" " alt="" coords="1711,281,1203,337,1202,331,1710,275"/>
-<area shape="poly" id="edge23_Node000021_Node000010" title=" " alt="" coords="1158,280,1158,314,1153,314,1153,280"/>
-<area shape="poly" id="edge25_Node000022_Node000010" title=" " alt="" coords="1269,200,1263,238,1256,261,1244,282,1221,306,1195,324,1192,319,1218,301,1240,278,1251,259,1258,237,1264,199"/>
-<area shape="poly" id="edge26_Node000022_Node000021" title=" " alt="" coords="1252,202,1184,249,1181,245,1249,197"/>
-<area shape="poly" id="edge28_Node000023_Node000007" title=" " alt="" coords="1523,174,1525,132,1530,133,1529,174"/>
-<area shape="rect" id="Node000024" title=" " alt="" coords="1482,255,1557,280"/>
-<area shape="poly" id="edge29_Node000023_Node000024" title=" " alt="" coords="1522,200,1522,241,1517,241,1517,200"/>
-<area shape="poly" id="edge36_Node000025_Node000002" title=" " alt="" coords="502,115,316,133,209,149,103,169,91,172,89,167,101,164,208,143,316,128,501,110"/>
-<area shape="poly" id="edge40_Node000025_Node000005" title=" " alt="" coords="502,119,361,137,282,152,204,169,194,172,193,167,203,164,281,146,360,132,502,113"/>
-<area shape="poly" id="edge31_Node000025_Node000008" title=" " alt="" coords="655,116,943,169,942,174,654,121"/>
-<area shape="poly" id="edge37_Node000025_Node000010" title=" " alt="" coords="598,118,614,160,627,184,645,205,700,244,761,275,825,298,890,315,954,326,1013,333,1108,338,1108,343,1013,339,953,332,889,320,824,303,759,280,697,249,642,209,623,187,609,163,593,120"/>
-<area shape="poly" id="edge38_Node000025_Node000018" title=" " alt="" coords="647,116,731,136,823,164,829,166,827,171,821,169,729,142,646,121"/>
-<area shape="poly" id="edge32_Node000025_Node000026" title=" " alt="" coords="615,117,688,158,686,162,612,121"/>
-<area shape="rect" id="Node000027" title=" " alt="" coords="477,174,581,199"/>
-<area shape="poly" id="edge34_Node000025_Node000027" title=" " alt="" coords="585,121,549,165,545,162,581,117"/>
-<area shape="rect" id="Node000028" title=" " alt="" coords="215,174,362,199"/>
-<area shape="poly" id="edge35_Node000025_Node000028" title=" " alt="" coords="549,121,347,173,345,168,548,116"/>
-<area shape="rect" id="Node000029" title=" " alt="" coords="386,174,453,199"/>
-<area shape="poly" id="edge39_Node000025_Node000029" title=" " alt="" coords="569,121,458,171,456,166,566,116"/>
-<area shape="poly" id="edge33_Node000026_Node000010" title=" " alt="" coords="767,204,838,241,923,277,1022,308,1109,328,1108,333,1020,313,921,283,836,246,765,209"/>
+<area shape="rect" id="Node000001" title="Configuration example with ABI, UVW, and PWM setup." alt="" coords="1044,5,1245,50"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,182,89,210"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1041,32,906,40,733,51,542,71,352,101,280,117,210,138,95,178,92,174,208,133,279,112,350,95,541,66,732,46,905,34,1046,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="1616,98,1766,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="1245,41,1603,97,1598,97,1245,47"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="1790,98,1906,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="1245,35,1483,59,1778,98,1772,98,1483,64,1246,41"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="113,182,189,210"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="1041,35,789,59,637,77,486,101,343,132,203,176,196,178,193,174,201,171,341,126,485,95,637,71,789,53,1046,34"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="1930,98,1996,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="1245,29,1377,36,1543,48,1727,67,1918,98,1912,98,1727,72,1542,53,1377,41,1246,35"/>
+<area shape="rect" id="Node000007" href="$as5047u_8hpp.html" title="Driver for AMS AS5047U Magnetic Rotary Position Sensor (C++21)" alt="" coords="1428,98,1591,126"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="1241,48,1439,94,1434,94,1241,53"/>
+<area shape="rect" id="Node000025" href="$esp32__as5047u__bus_8hpp.html" title="ESP32 SPI transport implementation for AS5047U driver (header&#45;only)" alt="" coords="498,98,678,126"/>
+<area shape="poly" id="edge30_Node000001_Node000025" title=" " alt="" coords="1041,45,694,98,692,93,1045,43"/>
+<area shape="rect" id="Node000026" href="$esp32__as5047u__test__config_8hpp.html" title="Hardware configuration for AS5047U driver on ESP32&#45;C6." alt="" coords="651,174,806,218"/>
+<area shape="poly" id="edge41_Node000001_Node000026" title=" " alt="" coords="1093,50,798,170,796,165,1087,51"/>
+<area shape="rect" id="Node000008" href="$as5047u__spi__interface_8hpp.html" title="CRTP&#45;based SPI bus interface for AS5047U driver." alt="" coords="915,182,1110,210"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="1425,126,1129,176,1099,182,1098,176,1128,171,1430,125"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="1116,342,1181,370"/>
+<area shape="poly" id="edge18_Node000007_Node000010" title=" " alt="" coords="1539,124,1569,144,1592,172,1604,208,1602,240,1588,269,1561,296,1532,311,1493,324,1393,341,1286,351,1196,356,1196,351,1285,346,1392,336,1492,319,1530,306,1557,292,1583,266,1597,239,1599,209,1587,175,1565,148,1538,129"/>
+<area shape="rect" id="Node000011" href="$as5047u__registers_8hpp.html" title="Register definitions for the AS5047U Rotary Position Sensor." alt="" coords="1700,266,1868,294"/>
+<area shape="poly" id="edge10_Node000007_Node000011" title=" " alt="" coords="1592,122,1727,145,1781,158,1810,172,1819,192,1819,213,1813,235,1803,255,1800,251,1808,233,1814,213,1814,193,1806,176,1780,163,1726,150,1592,127"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="1653,182,1796,210"/>
+<area shape="poly" id="edge12_Node000007_Node000012" title=" " alt="" coords="1545,124,1679,177,1673,176,1544,129"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="1872,182,1956,210"/>
+<area shape="poly" id="edge13_Node000007_Node000013" title=" " alt="" coords="1592,121,1716,142,1853,171,1866,177,1861,177,1852,176,1715,147,1592,127"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="1979,182,2035,210"/>
+<area shape="poly" id="edge14_Node000007_Node000014" title=" " alt="" coords="1592,121,1605,123,1708,132,1789,136,1869,145,1969,171,1976,176,1970,175,1968,176,1868,151,1789,141,1707,138,1604,128,1592,127"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="2059,182,2126,210"/>
+<area shape="poly" id="edge15_Node000007_Node000015" title=" " alt="" coords="1592,121,1605,123,1730,133,1828,136,1925,145,1982,155,2048,171,2057,176,2052,176,2046,176,1981,160,1925,150,1828,141,1729,138,1604,128,1592,127"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="2150,182,2208,210"/>
+<area shape="poly" id="edge16_Node000007_Node000016" title=" " alt="" coords="1592,122,1605,123,1686,130,1755,132,1874,132,1931,134,1991,139,2059,151,2138,171,2146,176,2141,175,2137,176,2058,156,1991,145,1931,139,1874,138,1755,138,1686,135,1604,128,1592,127"/>
+<area shape="rect" id="Node000017" title=" " alt="" coords="2232,182,2294,210"/>
+<area shape="poly" id="edge17_Node000007_Node000017" title=" " alt="" coords="1592,122,1605,123,1698,130,1779,132,1915,131,1981,131,2051,137,2130,149,2221,171,2229,176,2224,175,2220,176,2129,155,2050,142,1981,137,1915,136,1779,138,1698,136,1604,128,1592,127"/>
+<area shape="rect" id="Node000018" title=" " alt="" coords="830,182,890,210"/>
+<area shape="poly" id="edge19_Node000007_Node000018" title=" " alt="" coords="1425,112,1321,117,1189,126,1046,145,974,159,904,176,897,178,896,173,902,171,972,153,1045,140,1189,121,1321,112,1430,112"/>
+<area shape="rect" id="Node000019" title=" " alt="" coords="2318,182,2405,210"/>
+<area shape="poly" id="edge20_Node000007_Node000019" title=" " alt="" coords="1592,122,1605,123,1711,131,1802,134,1957,134,2032,135,2111,140,2201,151,2306,171,2320,177,2315,177,2305,176,2200,157,2111,145,2031,140,1957,139,1802,140,1711,137,1604,128,1592,127"/>
+<area shape="rect" id="Node000020" title=" " alt="" coords="1359,182,1418,210"/>
+<area shape="poly" id="edge21_Node000007_Node000020" title=" " alt="" coords="1493,125,1421,176,1419,171,1488,127"/>
+<area shape="rect" id="Node000021" href="$as5047u__types_8hpp.html" title="Type definitions for the AS5047U driver." alt="" coords="1075,266,1222,294"/>
+<area shape="poly" id="edge22_Node000007_Node000021" title=" " alt="" coords="1425,118,1356,127,1281,138,1216,154,1191,164,1174,176,1162,192,1154,211,1149,253,1145,249,1149,210,1157,189,1170,172,1189,159,1214,149,1280,133,1355,122,1430,117"/>
+<area shape="rect" id="Node000022" href="$as5047u__config_8hpp.html" title="Compile&#45;time configuration options for the AS5047U driver." alt="" coords="1184,182,1334,210"/>
+<area shape="poly" id="edge24_Node000007_Node000022" title=" " alt="" coords="1472,126,1314,179,1313,174,1467,127"/>
+<area shape="rect" id="Node000023" href="$as5047u_8ipp.html" title="Template implementation of AS5047U driver methods." alt="" coords="1442,182,1577,210"/>
+<area shape="poly" id="edge27_Node000007_Node000023" title=" " alt="" coords="1505,124,1503,168,1499,165,1501,128"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="931,266,1000,294"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="1007,209,982,255,979,251,1003,212"/>
+<area shape="poly" id="edge9_Node000008_Node000010" title=" " alt="" coords="1018,208,1037,249,1065,292,1088,314,1114,334,1108,333,1084,318,1061,296,1032,251,1016,213"/>
+<area shape="poly" id="edge11_Node000011_Node000010" title=" " alt="" coords="1703,291,1197,352,1196,346,1697,291"/>
+<area shape="poly" id="edge23_Node000021_Node000010" title=" " alt="" coords="1150,293,1150,328,1146,325,1146,296"/>
+<area shape="poly" id="edge25_Node000022_Node000010" title=" " alt="" coords="1260,209,1255,250,1247,274,1236,296,1215,318,1190,336,1188,331,1211,314,1231,292,1242,272,1250,249,1256,212"/>
+<area shape="poly" id="edge26_Node000022_Node000021" title=" " alt="" coords="1244,210,1179,259,1177,254,1239,211"/>
+<area shape="poly" id="edge28_Node000023_Node000007" title=" " alt="" coords="1514,180,1516,143,1520,139,1518,184"/>
+<area shape="rect" id="Node000024" title=" " alt="" coords="1472,266,1547,294"/>
+<area shape="poly" id="edge29_Node000023_Node000024" title=" " alt="" coords="1512,208,1512,253,1508,249,1508,212"/>
+<area shape="poly" id="edge36_Node000025_Node000002" title=" " alt="" coords="495,119,313,138,206,154,101,176,92,179,89,174,100,171,205,149,312,132,500,116"/>
+<area shape="poly" id="edge40_Node000025_Node000005" title=" " alt="" coords="495,122,358,143,279,157,202,176,194,179,192,174,201,171,278,152,357,138,500,120"/>
+<area shape="poly" id="edge31_Node000025_Node000008" title=" " alt="" coords="657,124,932,178,927,179,656,129"/>
+<area shape="poly" id="edge37_Node000025_Node000010" title=" " alt="" coords="592,124,609,170,623,195,641,216,695,256,755,288,818,311,883,329,946,340,1005,348,1102,355,1097,355,1004,353,945,346,882,334,817,316,752,292,692,261,637,220,618,198,604,172,590,128"/>
+<area shape="poly" id="edge38_Node000025_Node000018" title=" " alt="" coords="652,124,732,144,819,171,825,176,820,175,817,176,731,149,652,129"/>
+<area shape="poly" id="edge32_Node000025_Node000026" title=" " alt="" coords="611,124,681,165,675,165,610,129"/>
+<area shape="rect" id="Node000027" title=" " alt="" coords="473,182,576,210"/>
+<area shape="poly" id="edge34_Node000025_Node000027" title=" " alt="" coords="580,125,546,172,542,168,576,128"/>
+<area shape="rect" id="Node000028" title=" " alt="" coords="214,182,360,210"/>
+<area shape="poly" id="edge35_Node000025_Node000028" title=" " alt="" coords="538,128,351,180,349,175,542,125"/>
+<area shape="rect" id="Node000029" title=" " alt="" coords="384,182,449,210"/>
+<area shape="poly" id="edge39_Node000025_Node000029" title=" " alt="" coords="563,125,461,176,458,178,456,173,459,171,558,127"/>
+<area shape="poly" id="edge33_Node000026_Node000010" title=" " alt="" coords="765,216,836,254,920,292,1016,322,1103,345,1098,345,1014,327,918,296,834,259,764,221"/>
 </map>
