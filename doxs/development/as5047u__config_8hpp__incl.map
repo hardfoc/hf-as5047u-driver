@@ -1,8 +1,8 @@
 <map id="inc/as5047u_config.hpp" name="inc/as5047u_config.hpp">
-<area shape="rect" id="Node000001" title="Compile&#45;time configuration options for the AS5047U driver." alt="" coords="5,5,180,31"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="59,152,126,177"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="87,32,75,54,66,79,65,95,67,110,80,139,75,141,62,112,59,95,61,78,71,51,83,30"/>
-<area shape="rect" id="Node000003" href="$as5047u__types_8hpp.html" title="Type definitions for the AS5047U driver." alt="" coords="75,79,223,104"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="104,29,133,66,129,69,100,33"/>
-<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="142,106,112,143,108,140,137,103"/>
+<area shape="rect" id="Node000001" title="Compile&#45;time configuration options for the AS5047U driver." alt="" coords="5,5,179,33"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="59,157,125,184"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="82,36,74,56,65,82,63,95,65,108,79,143,74,143,60,109,58,95,60,80,70,54,85,31"/>
+<area shape="rect" id="Node000003" href="$as5047u__types_8hpp.html" title="Type definitions for the AS5047U driver." alt="" coords="74,81,222,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="103,31,132,68,126,69,101,36"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="140,108,113,146,109,142,136,110"/>
 </map>
