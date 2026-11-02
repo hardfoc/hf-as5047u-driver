@@ -1,1 +1,1 @@
-Sitemap: https://n3b3x.github.io/hf-as5047u-driver/development/sitemap.xml
+Sitemap: https://hardfoc.github.io/hf-as5047u-driver/development/sitemap.xml
