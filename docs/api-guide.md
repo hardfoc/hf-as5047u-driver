@@ -25,7 +25,7 @@ One `AS5047U<SpiType>` object per sensor. It offers three levels of access:
 | Angle settings | `SetZeroPosition()`, `GetZeroPosition()`, `SetDirection()`, `SetDynamicAngleCompensation()`, `SetAngleOutputSource()` |
 | Filter | `SetFilterPreset()`, `SetAdaptiveFilter()`, `SetFilterParameters()`, `GetFilterParameters()`, `GetAdaptiveFilterEnabled()` |
 | Outputs | `ConfigureInterface()`, `SetABIResolution()`, `SetIndexPulseLength()`, `SetUVWPolePairs()`, `SetHysteresis()` |
-| Chip | `Set150CTemperatureMode()`, `ProgramOTP()` |
+| Chip | `Set150CTemperatureMode()`, `ProgramOTP()`, `VerifyOTP()` |
 | Bus | `SetFrameFormat()`, `SetPad()`, `ComputeCRC8()` |
 
 Setters return `bool`: `false` means the value did not read back as written, or a frame failed on the bus (the

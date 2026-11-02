@@ -22,7 +22,8 @@ ctest --test-dir build-host --output-on-failure
 | --- | --- |
 | [`tests/test_frames.cpp`](../tests/test_frames.cpp) | CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit; reply CRC checks and the reply warning and error bits |
 | [`tests/test_driver.cpp`](../tests/test_driver.cpp) | Velocity sign and scale, zero position split, ABIRES codes, outputs, direction, filter presets, write verification, sticky flags, angle output source, bus-error propagation, `void` legacy ports |
-| [`tests/mock_as5047u.hpp`](../tests/mock_as5047u.hpp) | The chip model |
+| [`tests/test_otp.cpp`](../tests/test_otp.cpp) | `ProgramOTP()` against the datasheet procedure: the register writes of Figure 60, step 15, the guard-band test, failures before and after the burn, the poll timeout, the power-on check |
+| [`tests/mock_as5047u.hpp`](../tests/mock_as5047u.hpp) | The chip model, including the OTP (burn, refresh, guard band, power-on cycle) |
 | [`tests/test_harness.hpp`](../tests/test_harness.hpp) | A dependency-free test registry and `CHECK` macros |
 
 ## Documentation snippets

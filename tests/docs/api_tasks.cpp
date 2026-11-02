@@ -115,9 +115,13 @@ bool otp(Encoder& encoder) {
   // The settings are in the volatile registers (configure() above), the magnet is
   // at the zero position, VDD is 4.5 to 5.5 V (5 V mode) or 3.3 to 3.5 V (3.3 V
   // mode), and the chip is at 5 to 45 C.
-  if (!encoder.ProgramOTP()) {  // current angle becomes zero, then burns. Once.
-    return false;               // read-back did not match: do not use the part
+  as5047u::OtpResult result{};
+  if (!encoder.ProgramOTP(&result)) { // current angle becomes zero, then burns. Once.
+    std::printf("OTP step %u failed%s\n", static_cast<unsigned>(result.failed_step),
+                result.burn_started ? ": do not use the part" : ", nothing burned");
+    return false;
   }
-  return true;  // now power-cycle and compare the settings again
+  // Step 20: cycle the supply, then steps 21 and 22:
+  return encoder.VerifyOTP(result.written);
   // --8<-- [end:otp]
 }

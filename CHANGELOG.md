@@ -31,6 +31,14 @@ All notable changes to this driver are listed here. The format follows
 
 ### Fixed
 
+- `ProgramOTP()` follows the datasheet's step-by-step OTP procedure exactly (DS000637 page 41-42, Figure 60): it now
+  clears the volatile registers before the guard-band test (step 15, which was skipped, so the guard-band
+  comparison could pass on values still in the volatile registers), writes the PROG values of Figure 60 (`0x01`,
+  `0x08`, `0x40`, `0x04`; it wrote `0x09`, `0x49`, `0x4D`, `0x49`, which set PROGOTP again after the burn),
+  compares DISABLE..ECC (0x0015..0x001B) instead of 0x0016..0x001A, checks the result of every step and stops at
+  the first failure (it ignored every write result and could burn after a failed write). New optional
+  `OtpResult*` argument reports the failed step, whether the burn started and the burned image; new
+  `VerifyOTP()` performs the power-on check of steps 21 and 22.
 - The CRC of each 24- and 32-bit reply the driver uses is checked: a corrupted reply fails the access (retried
   when `retries` allows; a failed read returns 0) and sets the new `ReplyCrcError` sticky flag, instead of being
   returned as data. The warning and error bits of the replies are recorded as the new `ReplyWarning` and

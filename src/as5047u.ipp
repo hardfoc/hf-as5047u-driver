@@ -310,74 +310,149 @@ bool AS5047U<SpiType>::Set150CTemperatureMode(bool enable, uint8_t retries) {
 }
 
 template <typename SpiType>
-bool AS5047U<SpiType>::ProgramOTP() {
-  // Save current frame format and ensure we use CRC for OTP programming
-  FrameFormat backup = this->frame_format_;
-  if (this->frame_format_ == FrameFormat::SPI_16) {
-    this->frame_format_ = FrameFormat::SPI_24;
+bool AS5047U<SpiType>::ProgramOTP(OtpResult* result) {
+  OtpResult local{};
+  OtpResult& r = (result != nullptr) ? *result : local;
+  r = OtpResult{};
+  // The procedure writes registers: use frames with CRC (16-bit frames are for reads only).
+  const FrameFormat saved = frame_format_;
+  if (frame_format_ == FrameFormat::SPI_16) {
+    frame_format_ = FrameFormat::SPI_24;
   }
+  const bool ok = programOtpSteps(r);
+  frame_format_ = saved;
+  return ok;
+}
 
-  // Set current angle as zero position
-  SetZeroPosition(GetAngle());
-
-  // Backup the volatile shadow registers that will be committed to OTP
-  uint16_t volatile_shadow[5];
-  for (uint16_t a = 0x0016; a <= 0x001A; ++a) {
-    volatile_shadow[a - 0x0016] = readRegister(a);
-  }
-
-  // Enable ECC and compute needed checksum
-  auto ecc = this->template ReadReg<AS5047U_REG::ECC>();
-  ecc.bits.ECC_en = 1;
-  this->WriteReg(ecc);
-  auto key = this->template ReadReg<AS5047U_REG::ECC_Checksum>().bits.ECC_s;
-  ecc.bits.ECC_chsum = key;
-  this->WriteReg(ecc);
-
-  // Verify shadow registers are still correct
-  for (uint16_t a = 0x0016; a <= 0x001A; ++a) {
-    if (readRegister(a) != volatile_shadow[a - 0x0016]) {
-      this->frame_format_ = backup;
+template <typename SpiType>
+bool AS5047U<SpiType>::readOtpRegisters(std::array<uint16_t, kOtpRegisterCount>& regs,
+                                        uint8_t retries) const {
+  for (std::size_t i = 0; i < kOtpRegisterCount; ++i) {
+    if (!readWithRetries(static_cast<uint16_t>(kOtpFirstAddress + i), retries, regs[i])) {
       return false;
     }
   }
+  return true;
+}
 
-  // Begin OTP programming sequence
-  AS5047U_REG::PROG p{};
-  p.bits.PROGEN = 1;
-  this->WriteReg(p);
-  p.bits.PROGOTP = 1;
-  this->WriteReg(p);
+// Datasheet DS000637 v1-01, "Step-by-Step Procedure to Permanently Program the Non-Volatile Memory
+// (OTP)" (page 41-42) and Figure 60 (OTP Memory Burn and Verification Flowchart, page 43). The step
+// text reads 0x0016..0x001A / 0x001B; Figure 60 reads and clears 0x0015 (DISABLE) as well, and
+// DISABLE is one of the non-volatile registers (Figure 42), so 0x0015..0x001B are read and
+// compared. The PROG values are those of Figure 60. Steps 1-3 and 20-22 are the caller's (see
+// ProgramOTP()).
+template <typename SpiType>
+bool AS5047U<SpiType>::programOtpSteps(OtpResult& r) {
+  constexpr uint8_t kRetries = AS5047U_CFG::CRC_RETRIES;
+  constexpr std::size_t kZposm = AS5047U_REG::ZPOSM::ADDRESS - kOtpFirstAddress;
+  constexpr std::size_t kZposl = AS5047U_REG::ZPOSL::ADDRESS - kOtpFirstAddress;
+  constexpr std::size_t kEcc = AS5047U_REG::ECC::ADDRESS - kOtpFirstAddress;
+  constexpr uint16_t kProg = AS5047U_REG::PROG::ADDRESS;
+  const auto fail = [&r](uint8_t step) {
+    r.failed_step = step;
+    return false;
+  };
 
-  // Wait for programming to complete (timeout after ~15000 cycles)
-  for (uint16_t i = 0; i < 15000; ++i) {
-    if (readRegister(AS5047U_REG::PROG::ADDRESS) == 0x0001) {
-      this->frame_format_ = backup;
-
-      // Guard-band verification: enable PROGVER and refresh OTPREF
-      p.bits.PROGVER = 1;
-      this->WriteReg(p);
-
-      // Toggle OTPREF to reload from OTP
-      p.bits.OTPREF = 1;
-      this->WriteReg(p);
-      p.bits.OTPREF = 0;
-      this->WriteReg(p);
-
-      // Verify shadow registers match OTP
-      for (uint16_t a = 0x0016; a <= 0x001A; ++a) {
-        if (readRegister(a) != volatile_shadow[a - 0x0016]) {
-          this->frame_format_ = backup;
-          return false;
-        }
-      }
-      return true;
+  // 4. Read the measured angle from ANGLECOM.
+  uint16_t angle = 0;
+  if (!readWithRetries(AS5047U_REG::ANGLECOM::ADDRESS, kRetries, angle)) {
+    return fail(4);
+  }
+  // 5. ANGLECOM[5:0] into ZPOSL[5:0] (bits 7:6 kept), ANGLECOM[13:6] into ZPOSM[7:0].
+  AS5047U_REG::ZPOSL zposl{};
+  if (!ReadReg(zposl, kRetries)) {
+    return fail(5);
+  }
+  zposl.bits.ZPOSL_bits = angle & 0x3FU;
+  AS5047U_REG::ZPOSM zposm{};
+  zposm.bits.ZPOSM_bits = (angle >> 6) & 0xFFU;
+  if (!WriteReg(zposl, kRetries) || !WriteReg(zposm, kRetries)) {
+    return fail(5);
+  }
+  // 6. Read the settings (0x0015..0x001B): what the caller wrote in step 2.
+  std::array<uint16_t, kOtpRegisterCount> expected{};
+  if (!readOtpRegisters(expected, kRetries)) {
+    return fail(6);
+  }
+  // 7. ECC_en = 1 (Figure 60: Reg(0x001B) = 0x80).
+  AS5047U_REG::ECC ecc{};
+  ecc.bits.ECC_en = 1;
+  if (!WriteReg(ecc, kRetries)) {
+    return fail(7);
+  }
+  // 8. Read the ECC key ECC_s (0x3FD0).
+  AS5047U_REG::ECC_Checksum key{};
+  if (!ReadReg(key, kRetries)) {
+    return fail(8);
+  }
+  // 9. Write the key into ECC without clearing ECC_en.
+  ecc.bits.ECC_chsum = key.bits.ECC_s;
+  if (!WriteReg(ecc, kRetries)) {
+    return fail(9);
+  }
+  expected[kZposl] = zposl.value;
+  expected[kZposm] = zposm.value;
+  expected[kEcc] = ecc.value;
+  // 10. Read 0x0015..0x001B: read register step 1.
+  std::array<uint16_t, kOtpRegisterCount> step1{};
+  if (!readOtpRegisters(step1, kRetries)) {
+    return fail(10);
+  }
+  // 11. Compare with the written content (settings and angle).
+  if (step1 != expected) {
+    return fail(11);
+  }
+  r.written = step1;
+  // 12. PROGEN = 1 (Reg(0x0003) = 0x01): verified, it reads back as written.
+  if (!writeRegister(kProg, 0x0001, kRetries)) {
+    return fail(12);
+  }
+  // 13. PROGOTP = 1 (Reg(0x0003) = 0x08) starts the burn. Sent once, never retried, and from here
+  // on the part may be programmed whatever happens next.
+  r.burn_started = true;
+  if (!writeRegister(kProg, 0x0008, 0, false)) {
+    return fail(13);
+  }
+  // 14. Read PROG until it reads 0x0001 (programming procedure complete).
+  bool complete = false;
+  for (uint32_t i = 0; i < kOtpPollLimit && !complete; ++i) {
+    uint16_t prog = 0;
+    complete = readRegister(kProg, prog) && prog == 0x0001;
+  }
+  if (!complete) {
+    return fail(14);
+  }
+  // 15. Clear the volatile copy: 0x0000 into every non-volatile register (Figure 60).
+  for (std::size_t i = 0; i < kOtpRegisterCount; ++i) {
+    if (!writeRegister(static_cast<uint16_t>(kOtpFirstAddress + i), 0x0000, kRetries)) {
+      return fail(15);
     }
   }
+  // 16. PROGVER = 1: the guard band for the guard-band test (Reg(0x0003) = 0x40).
+  if (!writeRegister(kProg, 0x0040, 0, false)) {
+    return fail(16);
+  }
+  // 17. OTPREF = 1: refresh the registers from the OTP content (Reg(0x0003) = 0x04).
+  if (!writeRegister(kProg, 0x0004, 0, false)) {
+    return fail(17);
+  }
+  // 18. Read 0x0015..0x001B: read register step 2.
+  std::array<uint16_t, kOtpRegisterCount> step2{};
+  if (!readOtpRegisters(step2, kRetries)) {
+    return fail(18);
+  }
+  // 19. Compare with the written content: a deviation fails the guard-band test.
+  if (step2 != r.written) {
+    return fail(19);
+  }
+  return true;
+}
 
-  // Restore original frame format and return failure if timeout
-  this->frame_format_ = backup;
-  return false;
+template <typename SpiType>
+bool AS5047U<SpiType>::VerifyOTP(const std::array<uint16_t, kOtpRegisterCount>& burned,
+                                 uint8_t retries) const {
+  std::array<uint16_t, kOtpRegisterCount> now{};
+  return readOtpRegisters(now, retries) && now == burned;
 }
 
 template <typename SpiType>
@@ -581,7 +656,8 @@ uint16_t AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries) co
 }
 
 template <typename SpiType>
-bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t retries) const {
+bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t retries,
+                                     bool verify) const {
   // The AS5047U datasheet specifies 16-bit frames for read operations only.
   // Writes require 24-bit or 32-bit frames (which include CRC). If the current
   // frame format is SPI_16, temporarily promote to SPI_24 for the write, then
@@ -599,12 +675,15 @@ bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t r
                       transferFrame(format, expected, reply, true) &&   // MISO: old content
                       transferFrame(format, kReadBit | AS5047U_REG::NOP::ADDRESS, reply, true);
     const uint16_t read_back = reply & 0x3FFF; // MISO on the NOP: new content
-    if (sent && read_back == expected) {
+    if (sent && verify && read_back == expected) {
       return true;
     }
-    uint16_t errfl = 0; // why it failed; accumulated into the sticky flags
-    (void)readRegister(AS5047U_REG::ERRFL::ADDRESS, errfl);
-    if (sent) {
+    uint16_t errfl = 0; // why it failed (or, unverified, whether the chip took it); sticky flags
+    const bool errfl_ok = readRegister(AS5047U_REG::ERRFL::ADDRESS, errfl);
+    if (!verify && sent && errfl_ok && (errfl & kCommandErrorMask) == 0U) {
+      return true;
+    }
+    if (sent && verify) {
       AS5047U_REG::ERRFL e{};
       e.value = errfl;
       printf("AS5047U write verify failed: addr=0x%04X expected=0x%04X read_back=0x%04X "

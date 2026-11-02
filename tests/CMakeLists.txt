@@ -13,6 +13,7 @@ add_executable(hf_as5047u_host_tests
   test_main.cpp
   test_frames.cpp
   test_driver.cpp
+  test_otp.cpp
 )
 
 target_link_libraries(hf_as5047u_host_tests PRIVATE ${HF_AS5047U_TARGET_NAME})
