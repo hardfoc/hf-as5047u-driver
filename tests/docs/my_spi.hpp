@@ -15,18 +15,20 @@
 // Platform hooks: your SDK's calls. Declared only, so the port compiles.
 void platform_cs_low() noexcept;
 void platform_cs_high() noexcept;
-// Full duplex, SPI mode 1, MSB first.
-void platform_spi_exchange(const uint8_t* tx, uint8_t* rx, std::size_t len) noexcept;
+// Full duplex, SPI mode 1, MSB first. False on a bus error.
+bool platform_spi_exchange(const uint8_t* tx, uint8_t* rx, std::size_t len) noexcept;
 
 // --8<-- [start:port]
 class MySpi : public as5047u::SpiInterface<MySpi> {
 public:
   // One frame of 2, 3 or 4 bytes, full duplex, CSn low for the whole frame.
   // SPI mode 1 (CPOL = 0, CPHA = 1), MSB first, up to 10 MHz.
-  void transfer(const uint8_t* tx, uint8_t* rx, std::size_t len) {
+  // Return false on a bus error: the driver call that sent the frame then fails.
+  bool transfer(const uint8_t* tx, uint8_t* rx, std::size_t len) {
     platform_cs_low();
-    platform_spi_exchange(tx, rx, len);
-    platform_cs_high();  // the chip executes the frame here; >= 350 ns high
+    const bool ok = platform_spi_exchange(tx, rx, len);
+    platform_cs_high(); // the chip executes the frame here; >= 350 ns high
+    return ok;
   }
 };
 // --8<-- [end:port]

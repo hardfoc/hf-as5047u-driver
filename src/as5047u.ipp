@@ -122,12 +122,18 @@ uint16_t AS5047U<SpiType>::GetMagnitude(uint8_t retries) const {
 
 template <typename SpiType>
 uint16_t AS5047U<SpiType>::GetErrorFlags(uint8_t retries) const {
-  // ERRFL clears when read: a retry would return the flags of the retry, not of the failed read.
-  // readRegister() ORs every ERRFL value into the sticky flags, so nothing is lost either way.
-  (void)retries;
-  uint16_t val = 0;
-  (void)readRegister(AS5047U_REG::ERRFL::ADDRESS, val);
-  return val;
+  // ERRFL clears when read, so a retry is only made when the read itself failed (bus error); every
+  // value read is ORed into the result and, by readRegister(), into the sticky flags.
+  uint16_t flags = 0;
+  for (uint8_t i = 0; i <= retries; ++i) {
+    uint16_t val = 0;
+    const bool ok = readRegister(AS5047U_REG::ERRFL::ADDRESS, val);
+    flags |= val;
+    if (ok) {
+      break;
+    }
+  }
+  return flags;
 }
 
 template <typename SpiType>
@@ -155,7 +161,10 @@ bool AS5047U<SpiType>::SetABIResolution(uint8_t resolution_bits, uint8_t retries
   resolution_bits = std::clamp(resolution_bits, uint8_t(10), uint8_t(14));
   // Datasheet SETTINGS3 ABIRES (binary mode): 12-bit=0, 11=1, 10=2, 13=3, 14=4 (non-linear)
   static constexpr uint8_t kBitsToAbires[] = {2, 1, 0, 3, 4};  // index (bits-10) -> ABIRES code
-  auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
+  AS5047U_REG::SETTINGS3 s3{};
+  if (!this->ReadReg(s3, retries)) {
+    return false;
+  }
   s3.bits.ABIRES = kBitsToAbires[resolution_bits - 10];
   return this->WriteReg(s3, retries);
 }
@@ -163,14 +172,20 @@ bool AS5047U<SpiType>::SetABIResolution(uint8_t resolution_bits, uint8_t retries
 template <typename SpiType>
 bool AS5047U<SpiType>::SetUVWPolePairs(uint8_t pairs, uint8_t retries) {
   pairs = std::clamp(pairs, uint8_t(1), uint8_t(7));
-  auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
+  AS5047U_REG::SETTINGS3 s3{};
+  if (!this->ReadReg(s3, retries)) {
+    return false;
+  }
   s3.bits.UVWPP = static_cast<uint8_t>(pairs - 1);
   return this->WriteReg(s3, retries);
 }
 
 template <typename SpiType>
 bool AS5047U<SpiType>::SetIndexPulseLength(uint8_t lsb_len, uint8_t retries) {
-  auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!this->ReadReg(s2, retries)) {
+    return false;
+  }
   s2.bits.IWIDTH = (lsb_len == 1) ? 1 : 0;
   return this->WriteReg(s2, retries);
 }
@@ -188,8 +203,14 @@ bool AS5047U<SpiType>::SetIndexPulseLength(uint8_t lsb_len, uint8_t retries) {
 //
 template <typename SpiType>
 bool AS5047U<SpiType>::ConfigureInterface(bool abi, bool uvw, bool pwm, uint8_t retries) {
-  auto dis = this->template ReadReg<AS5047U_REG::DISABLE>();
-  auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::DISABLE dis{};
+  if (!this->ReadReg(dis, retries)) {
+    return false;
+  }
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!this->ReadReg(s2, retries)) {
+    return false;
+  }
   dis.bits.ABI_off = abi ? 0 : 1;
   dis.bits.UVW_off = uvw ? 0 : 1;
   if (abi && !uvw) {
@@ -207,14 +228,20 @@ bool AS5047U<SpiType>::ConfigureInterface(bool abi, bool uvw, bool pwm, uint8_t 
 
 template <typename SpiType>
 bool AS5047U<SpiType>::SetDynamicAngleCompensation(bool enable, uint8_t retries) {
-  auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!this->ReadReg(s2, retries)) {
+    return false;
+  }
   s2.bits.DAECDIS = enable ? 0 : 1;
   return this->WriteReg(s2, retries);
 }
 
 template <typename SpiType>
 bool AS5047U<SpiType>::SetAdaptiveFilter(bool enable, uint8_t retries) {
-  auto dis = this->template ReadReg<AS5047U_REG::DISABLE>();
+  AS5047U_REG::DISABLE dis{};
+  if (!this->ReadReg(dis, retries)) {
+    return false;
+  }
   dis.bits.FILTER_disable = enable ? 0 : 1;
   return this->WriteReg(dis, retries);
 }
@@ -223,7 +250,10 @@ template <typename SpiType>
 bool AS5047U<SpiType>::SetFilterParameters(uint8_t k_min, uint8_t k_max, uint8_t retries) {
   k_min = std::min(k_min, uint8_t(7));
   k_max = std::min(k_max, uint8_t(7));
-  auto s1 = this->template ReadReg<AS5047U_REG::SETTINGS1>();
+  AS5047U_REG::SETTINGS1 s1{};
+  if (!this->ReadReg(s1, retries)) {
+    return false;
+  }
   s1.bits.K_min = k_min;
   s1.bits.K_max = k_max;
   return this->WriteReg(s1, retries);
@@ -271,7 +301,10 @@ std::pair<uint8_t, uint8_t> AS5047U<SpiType>::GetFilterParameters(uint8_t retrie
 
 template <typename SpiType>
 bool AS5047U<SpiType>::Set150CTemperatureMode(bool enable, uint8_t retries) {
-  auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!this->ReadReg(s2, retries)) {
+    return false;
+  }
   s2.bits.NOISESET = enable ? 1 : 0;
   return this->WriteReg(s2, retries);
 }
@@ -391,7 +424,10 @@ void AS5047U<SpiType>::SetPad(uint8_t pad) noexcept {
 template <typename SpiType>
 bool AS5047U<SpiType>::SetHysteresis(AS5047U_REG::SETTINGS3::Hysteresis hysteresis,
                                      uint8_t retries) {
-  auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
+  AS5047U_REG::SETTINGS3 s3{};
+  if (!this->ReadReg(s3, retries)) {
+    return false;
+  }
   s3.bits.HYS = static_cast<uint8_t>(hysteresis);
   return this->WriteReg(s3, retries);
 }
@@ -405,7 +441,10 @@ AS5047U_REG::SETTINGS3::Hysteresis AS5047U<SpiType>::GetHysteresis() const {
 template <typename SpiType>
 bool AS5047U<SpiType>::SetAngleOutputSource(AS5047U_REG::SETTINGS2::AngleOutputSource source,
                                             uint8_t retries) {
-  auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!this->ReadReg(s2, retries)) {
+    return false;
+  }
   s2.bits.Data_select = static_cast<uint8_t>(source);
   return this->WriteReg(s2, retries);
 }
@@ -425,108 +464,76 @@ AS5047U_REG::DIA AS5047U<SpiType>::GetDiagnostics() const {
 //                           PRIVATE - COMMUNICATION API
 // ══════════════════════════════════════════════════════════════════════════════════════════
 //
-// SPI frame layout per AS5047U datasheet (DS000637):
-// - 16-bit: Fig.20-22  MOSI bit14=R(1:Read), 13:0=ADDR; MISO bit15=ER, 14=0, 13:0=RDATA (Fig.21-22).
-// - 24-bit: Fig.23-25  MOSI 22=RW, 21:8=ADDR, 7:0=CRC; MISO 23=ER, 22=Error, 21:8=DATA[13:0], 7:0=CRC (Fig.25). CRC Fig.31.
-// - 32-bit: Fig.26-28  PAD in B0 (MOSI) / B3 (MISO); MISO B0=[ER,Err,Data13:8], B1=Data7:0, B2=CRC, B3=PAD (Fig.28).
-//
-// Low level register read without sticky error update.
-// DS: "The data is transmitted on MISO with the *next* read command." So we always send
-// (1) read command for address, (2) NOP; the NOP response carries the data for that address.
+// SPI frame layout per AS5047U datasheet (DS000637 v1-01, "SPI Transaction"):
+// - 16-bit (Figures 20-22): MOSI [15] don't care, [14] R, [13:0] ADDR;
+//                           MISO [15] warning, [14] error, [13:0] DATA.
+// - 24-bit (Figures 23-25): MOSI [23] don't care, [22] RW, [21:8] ADDR or DATA, [7:0] CRC;
+//                           MISO [23] warning, [22] error, [21:8] DATA, [7:0] CRC.
+// - 32-bit (Figures 26-28): MOSI [31:24] PAD, then the 24-bit frame;
+//                           MISO [31] warning, [30] error, [29:16] DATA, [15:8] CRC, [7:0] PAD.
+// In every format the 16-bit word (RW and address, or the data) leads the frame after the PAD, and
+// the CRC covers that word (Figure 31 and "CRC Checksum").
+
+// One frame: send `word` in `format`, return the 16-bit reply word (warning, error, 14 data bits).
+// False when the port's transfer() reports a bus error; that also sets the BusError sticky flag.
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::rawReadRegister(uint16_t address) const {
-  uint16_t result = 0;
-  if (this->frame_format_ == FrameFormat::SPI_16) {
-    // ---- 16-bit frame without CRC ----
-    // (1) Read command (bit14=1 for read)
-    uint16_t cmd = static_cast<uint16_t>(0x4000 | (address & 0x3FFF));
-    const uint8_t tx[2] = {static_cast<uint8_t>(cmd >> 8), static_cast<uint8_t>(cmd & 0xFF)};
-    uint8_t rx[2];
-    spi_.transfer(tx, rx, 2);
-
-    // (2) NOP — MISO from this transfer = data for the address we just requested
-    const uint8_t tx_nop[2] = {0x40, 0x00};
-    uint8_t rx_data[2];
-    spi_.transfer(tx_nop, rx_data, 2);
-
-    // Process response
-    uint16_t raw = (static_cast<uint16_t>(rx_data[0]) << 8) | rx_data[1];
-    result = raw & 0x3FFF; // Mask out status flags
-  } else if (this->frame_format_ == FrameFormat::SPI_24) {
-    // ---- 24-bit frame with CRC ----
-    // (1) Read command with CRC
-    uint16_t crc_input = static_cast<uint16_t>((1 << 14) | (address & 0x3FFF));
-    uint8_t crc = ComputeCRC8(crc_input);
-    const uint8_t tx_cmd[3] = {
-        static_cast<uint8_t>(((address >> 8) & 0x3F) | 0x40), // bit6=1 for read
-        static_cast<uint8_t>(address & 0xFF), crc};
-    uint8_t rx_cmd[3];
-    spi_.transfer(tx_cmd, rx_cmd, 3);
-
-    // (2) NOP — MISO from this transfer = data for the requested address
-    uint16_t nop_addr = AS5047U_REG::NOP::ADDRESS;
-    uint16_t nop_crc_input = static_cast<uint16_t>((1 << 14) | (nop_addr & 0x3FFF));
-    uint8_t crc_nop = ComputeCRC8(nop_crc_input);
-    const uint8_t tx_nop[3] = {static_cast<uint8_t>(((nop_addr >> 8) & 0x3F) | 0x40),
-                               static_cast<uint8_t>(nop_addr & 0xFF), crc_nop};
-    uint8_t rx_data_frame[3];
-    spi_.transfer(tx_nop, rx_data_frame, 3);
-
-    // Process response with CRC verification
-    uint16_t raw = (static_cast<uint16_t>(rx_data_frame[0]) << 8) | rx_data_frame[1];
-    uint8_t crc_device = rx_data_frame[2];
-    uint8_t crc_calc = ComputeCRC8(raw);
-    if (crc_device != crc_calc) {
-      // crc error, caller will read ERRFL
-    }
-    result = raw & 0x3FFF;
-  } else if (this->frame_format_ == FrameFormat::SPI_32) {
-    // ---- 32-bit frame with CRC and pad byte (DS Fig.26-28) ----
-    // MISO data frame (Fig.28): Bit31=ER, 30=Error, 29:16=Data(14b), 15:8=CRC, 7:0=PAD.
-    // So Byte0=[ER,Err,Data13:8], Byte1=Data7:0, Byte2=CRC, Byte3=PAD. CRC over bits 31:16 (DS p.23).
-    uint16_t crc_input = static_cast<uint16_t>((1 << 14) | (address & 0x3FFF));
-    uint8_t crc = ComputeCRC8(crc_input);
-    const uint8_t tx_cmd[4] = {
-        this->pad_byte_,
-        static_cast<uint8_t>(((address >> 8) & 0x3F) | 0x40), // bit6=1 for read
-        static_cast<uint8_t>(address & 0xFF), crc};
-    uint8_t rx_cmd[4];
-    spi_.transfer(tx_cmd, rx_cmd, 4);
-
-    // (2) NOP — MISO from this transfer = data for the requested address. Fig.28: Byte0/1=Data, Byte2=CRC, Byte3=PAD.
-    uint16_t nop_addr = AS5047U_REG::NOP::ADDRESS;
-    uint16_t nop_crc_input = static_cast<uint16_t>((1 << 14) | (nop_addr & 0x3FFF));
-    uint8_t crc_nop = ComputeCRC8(nop_crc_input);
-    const uint8_t tx_nop[4] = {this->pad_byte_,
-                               static_cast<uint8_t>(((nop_addr >> 8) & 0x3F) | 0x40),
-                               static_cast<uint8_t>(nop_addr & 0xFF), crc_nop};
-    uint8_t rx_data_frame[4];
-    spi_.transfer(tx_nop, rx_data_frame, 4);
-
-    // Data = bits 29:16 = (Byte0 & 0x3F)<<8 | Byte1; CRC = Byte2 (bits 15:8); Byte3 = PAD
-    uint16_t raw = (static_cast<uint16_t>(rx_data_frame[0] & 0x3Fu) << 8) | rx_data_frame[1];
-    uint16_t crc_payload_32 = (static_cast<uint16_t>(rx_data_frame[0]) << 8) | rx_data_frame[1];
-    uint8_t crc_device = rx_data_frame[2];
-    uint8_t crc_calc = ComputeCRC8(crc_payload_32);
-    if (crc_device != crc_calc) {
-      // crc error, caller will read ERRFL
-    }
-    result = raw & 0x3FFF;
+bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t& reply) const {
+  uint8_t tx[4] = {};
+  uint8_t rx[4] = {};
+  std::size_t len = 2;
+  std::size_t o = 0; // offset of the word: 1 in 32-bit frames, after the PAD
+  if (format == FrameFormat::SPI_32) {
+    tx[0] = pad_byte_;
+    o = 1;
+    len = 4;
+  } else if (format == FrameFormat::SPI_24) {
+    len = 3;
   }
-  return result;
+  tx[o] = static_cast<uint8_t>(word >> 8);
+  tx[o + 1] = static_cast<uint8_t>(word & 0xFF);
+  if (format != FrameFormat::SPI_16) {
+    tx[o + 2] = ComputeCRC8(word);
+  }
+  if (!detail::Transfer(spi_, tx, rx, len)) {
+    sticky_errors_.fetch_or(static_cast<uint16_t>(AS5047U_Error::BusError));
+    reply = 0;
+    return false;
+  }
+  reply = static_cast<uint16_t>((static_cast<uint16_t>(rx[0]) << 8) | rx[1]);
+  return true;
+}
+
+// Register read without the ERRFL read. DS: "the data is transmitted on MISO with the next read
+// command" (Figure 29), so the read command is followed by a NOP whose reply carries the data.
+template <typename SpiType>
+bool AS5047U<SpiType>::rawReadRegister(uint16_t address, uint16_t& value) const {
+  uint16_t reply = 0;
+  const bool ok =
+      transferFrame(frame_format_, static_cast<uint16_t>(kReadBit | (address & 0x3FFF)), reply) &&
+      transferFrame(frame_format_, kReadBit | AS5047U_REG::NOP::ADDRESS, reply);
+  value = ok ? static_cast<uint16_t>(reply & 0x3FFF) : 0U;
+  return ok;
 }
 
 // Register read that also fetches ERRFL (cleared on the chip by that read, datasheet Figure 33) and
 // ORs it into the sticky flags. A read of ERRFL itself is accumulated directly: reading it a second
-// time would return 0 and lose the flags.
+// time would return 0 and lose the flags. True when every frame went through and, for a register
+// other than ERRFL, the chip reported no CRC or framing error for the access.
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::readRegister(uint16_t address, uint16_t& value) const {
-  value = rawReadRegister(address);
-  const uint16_t err = (address == AS5047U_REG::ERRFL::ADDRESS)
-                           ? value
-                           : rawReadRegister(AS5047U_REG::ERRFL::ADDRESS);
+bool AS5047U<SpiType>::readRegister(uint16_t address, uint16_t& value) const {
+  if (!rawReadRegister(address, value)) {
+    return false;
+  }
+  if (address == AS5047U_REG::ERRFL::ADDRESS) {
+    updateStickyErrors(value);
+    return true;
+  }
+  uint16_t err = 0;
+  if (!rawReadRegister(AS5047U_REG::ERRFL::ADDRESS, err)) {
+    return false;
+  }
   updateStickyErrors(err);
-  return err;
+  return (err & kRetryMask) == 0U;
 }
 
 template <typename SpiType>
@@ -537,112 +544,58 @@ uint16_t AS5047U<SpiType>::readRegister(uint16_t address) const {
 }
 
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries) const {
-  uint16_t value = 0;
+bool AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries, uint16_t& value) const {
   for (uint8_t i = 0; i <= retries; ++i) {
-    if ((readRegister(address, value) & kRetryMask) == 0U) {
-      break;
+    if (readRegister(address, value)) {
+      return true;
     }
   }
+  return false;
+}
+
+template <typename SpiType>
+uint16_t AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries) const {
+  uint16_t value = 0;
+  (void)readWithRetries(address, retries, value);
   return value;
 }
 
 template <typename SpiType>
 bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t retries) const {
-  bool success = false;
-
   // The AS5047U datasheet specifies 16-bit frames for read operations only.
   // Writes require 24-bit or 32-bit frames (which include CRC). If the current
   // frame format is SPI_16, temporarily promote to SPI_24 for the write, then
   // restore. This ensures writes always reach the IC correctly.
-  FrameFormat active_format = this->frame_format_;
-  if (active_format == FrameFormat::SPI_16) {
-    active_format = FrameFormat::SPI_24;
-  }
+  const FrameFormat format =
+      (frame_format_ == FrameFormat::SPI_16) ? FrameFormat::SPI_24 : frame_format_;
 
   // DS Fig.30: Write = command frame then data frame. MISO during data = old content.
   // "At the next command" MISO = new content — so we send NOP after data and use that MISO to verify.
   // CS may toggle between command and data frames.
   const uint16_t expected = value & 0x3FFF;
-  const uint16_t nop_addr = AS5047U_REG::NOP::ADDRESS;
-  const uint16_t nop_crc_input = static_cast<uint16_t>((1 << 14) | (nop_addr & 0x3FFF));
-  const uint8_t crc_nop = ComputeCRC8(nop_crc_input);
-
   for (uint8_t attempt = 0; attempt <= retries; ++attempt) {
-    if (active_format == FrameFormat::SPI_24) {
-      // ---- 24-bit write: command, data, then NOP (MISO on NOP = new content) ----
-      uint16_t cmd_payload = static_cast<uint16_t>(address & 0x3FFF);
-      uint8_t cmd_crc = ComputeCRC8(cmd_payload);
-      const uint8_t tx_cmd[3] = {static_cast<uint8_t>((address >> 8) & 0x3F), // bit6=0 for write
-                                 static_cast<uint8_t>(address & 0xFF), cmd_crc};
-      uint8_t rx_cmd[3];
-      spi_.transfer(tx_cmd, rx_cmd, 3);
-
-      uint16_t data_payload = value & 0x3FFF;
-      uint8_t data_crc = ComputeCRC8(data_payload);
-      const uint8_t tx_data[3] = {static_cast<uint8_t>((data_payload >> 8) & 0xFF),
-                                  static_cast<uint8_t>(data_payload & 0xFF), data_crc};
-      uint8_t rx_data[3];
-      spi_.transfer(tx_data, rx_data, 3);  // MISO here = old content (DS Fig.30)
-
-      // NOP — MISO = new content of the written register (third TX = response to write)
-      // 24-bit MISO same layout as 32-bit: Byte0=[ER,Err,Data13:8], Byte1=Data7:0 → 14-bit = (B0&0x3F)<<8|B1
-      const uint8_t tx_nop[3] = {static_cast<uint8_t>(((nop_addr >> 8) & 0x3F) | 0x40),
-                                 static_cast<uint8_t>(nop_addr & 0xFF), crc_nop};
-      uint8_t rx_nop[3];
-      spi_.transfer(tx_nop, rx_nop, 3);
-      uint16_t read_back = (static_cast<uint16_t>(rx_nop[0] & 0x3Fu) << 8) | rx_nop[1];
-      if (read_back == expected) {
-        success = true;
-        break;
-      }
-      auto errfl = this->template ReadReg<AS5047U_REG::ERRFL>(); // accumulated into sticky flags
+    uint16_t reply = 0;
+    const bool sent = transferFrame(format, address & 0x3FFF, reply) && // RW = 0: write
+                      transferFrame(format, expected, reply) &&         // MISO: old content
+                      transferFrame(format, kReadBit | AS5047U_REG::NOP::ADDRESS, reply);
+    const uint16_t read_back = reply & 0x3FFF; // MISO on the NOP: new content
+    if (sent && read_back == expected) {
+      return true;
+    }
+    uint16_t errfl = 0; // why it failed; accumulated into the sticky flags
+    (void)readRegister(AS5047U_REG::ERRFL::ADDRESS, errfl);
+    if (sent) {
+      AS5047U_REG::ERRFL e{};
+      e.value = errfl;
       printf("AS5047U write verify failed: addr=0x%04X expected=0x%04X read_back=0x%04X "
              "ERRFL=0x%04X (CRC_error=%u Framing_error=%u Command_error=%u)\n",
              static_cast<unsigned>(address), static_cast<unsigned>(expected),
-             static_cast<unsigned>(read_back), static_cast<unsigned>(errfl.value),
-             static_cast<unsigned>(errfl.bits.CRC_error),
-             static_cast<unsigned>(errfl.bits.Framing_error),
-             static_cast<unsigned>(errfl.bits.Command_error));
-    } else if (active_format == FrameFormat::SPI_32) {
-      // ---- 32-bit write: command, data, then NOP (MISO on NOP = new content) ----
-      uint16_t cmd_payload = static_cast<uint16_t>(address & 0x3FFF);
-      uint8_t cmd_crc = ComputeCRC8(cmd_payload);
-      const uint8_t tx_cmd[4] = {this->pad_byte_,
-                                 static_cast<uint8_t>((address >> 8) & 0x3F), // bit6=0 for write
-                                 static_cast<uint8_t>(address & 0xFF), cmd_crc};
-      uint8_t rx_cmd[4];
-      spi_.transfer(tx_cmd, rx_cmd, 4);
-
-      uint16_t data_payload = value & 0x3FFF;
-      uint8_t data_crc = ComputeCRC8(data_payload);
-      const uint8_t tx_data[4] = {this->pad_byte_, static_cast<uint8_t>((data_payload >> 8) & 0xFF),
-                                  static_cast<uint8_t>(data_payload & 0xFF), data_crc};
-      uint8_t rx_data[4];
-      spi_.transfer(tx_data, rx_data, 4);  // MISO here = old content (DS Fig.30)
-
-      // NOP — MISO = new content (Fig.28: Byte0/1 = Data, Byte2 = CRC, Byte3 = PAD)
-      const uint8_t tx_nop[4] = {this->pad_byte_,
-                                static_cast<uint8_t>(((nop_addr >> 8) & 0x3F) | 0x40),
-                                static_cast<uint8_t>(nop_addr & 0xFF), crc_nop};
-      uint8_t rx_nop[4];
-      spi_.transfer(tx_nop, rx_nop, 4);
-      uint16_t read_back = (static_cast<uint16_t>(rx_nop[0] & 0x3Fu) << 8) | rx_nop[1];
-      if (read_back == expected) {
-        success = true;
-        break;
-      }
-      auto errfl = this->template ReadReg<AS5047U_REG::ERRFL>(); // accumulated into sticky flags
-      printf("AS5047U write verify failed: addr=0x%04X expected=0x%04X read_back=0x%04X "
-             "ERRFL=0x%04X (CRC_error=%u Framing_error=%u Command_error=%u)\n",
-             static_cast<unsigned>(address), static_cast<unsigned>(expected),
-             static_cast<unsigned>(read_back), static_cast<unsigned>(errfl.value),
-             static_cast<unsigned>(errfl.bits.CRC_error),
-             static_cast<unsigned>(errfl.bits.Framing_error),
-             static_cast<unsigned>(errfl.bits.Command_error));
+             static_cast<unsigned>(read_back), static_cast<unsigned>(e.value),
+             static_cast<unsigned>(e.bits.CRC_error), static_cast<unsigned>(e.bits.Framing_error),
+             static_cast<unsigned>(e.bits.Command_error));
     }
   }
-  return success;
+  return false;
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════

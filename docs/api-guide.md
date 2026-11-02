@@ -28,8 +28,10 @@ One `AS5047U<SpiType>` object per sensor. It offers three levels of access:
 | Chip | `Set150CTemperatureMode()`, `ProgramOTP()` |
 | Bus | `SetFrameFormat()`, `SetPad()`, `ComputeCRC8()` |
 
-Setters return `bool`: `false` means the value did not read back as written. Measurements return the value; their
-errors are reported through the error flags (below). Nothing throws and nothing allocates.
+Setters return `bool`: `false` means the value did not read back as written, or a frame failed on the bus (the
+port's `transfer()` returned `false`). Measurements return the value (0 when the read failed); their errors are
+reported through the error flags (below). `ReadReg(reg)` reads any register and returns whether the read worked.
+Nothing throws and nothing allocates.
 
 Every call that takes a `retries` argument (default `AS5047U_CFG::CRC_RETRIES`, 0) repeats the access that many
 times when the chip reports a CRC or framing error.
@@ -130,6 +132,7 @@ what happened since the driver's previous read of it; the sticky flags hold ever
 | `WatchdogError` | 7 | Internal oscillator or watchdog fault | Power-cycle; replace the part if it persists |
 | `OffCompError` | 9 | Offset compensation not finished | Normal right after power-on; wait 10 ms |
 | `CordicOverflow` | 10 | CORDIC overflow | The angle is not valid; check the field |
+| `BusError` | (driver) | The port's `transfer()` returned `false` | Check the SPI driver and the bus; see [Porting](porting.md#bus-errors) |
 
 After any flag the datasheet asks for a read of DIA (`GetDiagnostics()`) for the details.
 [Troubleshooting](troubleshooting.md) maps symptoms to causes.

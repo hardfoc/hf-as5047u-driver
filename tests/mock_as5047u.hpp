@@ -11,7 +11,8 @@
  *   over bits 23:8; a wrong CRC sets ERRFL.CRC_error and the command is not executed.
  * - Reading ERRFL clears it.
  *
- * Every MOSI frame is logged so tests can check the exact bytes the driver sends.
+ * Every MOSI frame is logged so tests can check the exact bytes the driver sends, and a transfer
+ * can be made to fail on demand (the port's bus-error return).
  */
 #pragma once
 
@@ -37,7 +38,41 @@ public:
     return as5047u::AS5047U<MockAs5047u>::ComputeCRC8(word);
   }
 
-  void transfer(const uint8_t* tx, uint8_t* rx, std::size_t len) {
+  // --- bus fault injection ------------------------------------------------
+  /// Number of transfers that still succeed; once it reaches 0 every transfer fails (the frame is
+  /// not clocked: the chip does not see it and rx is left untouched). Negative: never fail.
+  int transfers_before_failure = -1;
+  /// Index (0-based, counting every call) of one transfer that fails; the bus works again after it.
+  /// Negative: none.
+  long fail_transfer_at = -1;
+  std::size_t transfers = 0;        ///< transfer() calls so far
+  std::size_t failed_transfers = 0; ///< transfers that reported a bus error
+
+  /// CRTP contract: one full-duplex frame; false on a bus error.
+  bool transfer(const uint8_t* tx, uint8_t* rx, std::size_t len) {
+    const auto index = static_cast<long>(transfers++);
+    if (transfers_before_failure == 0 || index == fail_transfer_at) {
+      ++failed_transfers;
+      return false;
+    }
+    if (transfers_before_failure > 0) {
+      --transfers_before_failure;
+    }
+    frame(tx, rx, len);
+    return true;
+  }
+
+  /// Number of frames of a given length the driver sent.
+  [[nodiscard]] std::size_t framesOfLength(std::size_t len) const {
+    std::size_t n = 0;
+    for (const auto& f : mosi) {
+      n += (f.size() == len) ? 1U : 0U;
+    }
+    return n;
+  }
+
+private:
+  void frame(const uint8_t* tx, uint8_t* rx, std::size_t len) {
     mosi.emplace_back(tx, tx + len);
 
     // MISO: the word prepared at the end of the previous frame.
@@ -92,16 +127,6 @@ public:
     }
   }
 
-  /// Number of frames of a given length the driver sent.
-  [[nodiscard]] std::size_t framesOfLength(std::size_t len) const {
-    std::size_t n = 0;
-    for (const auto& f : mosi) {
-      n += (f.size() == len) ? 1U : 0U;
-    }
-    return n;
-  }
-
-private:
   uint16_t readRegister(uint16_t addr) {
     if (addr == AS5047U_REG::ERRFL::ADDRESS) {
       const uint16_t v = regs[addr];

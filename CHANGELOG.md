@@ -12,6 +12,13 @@ All notable changes to this driver are listed here. The format follows
 
 ### Changed
 
+- **Breaking (port contract):** the SPI port's `transfer()` returns `bool` (`true` = frame clocked, `false` = bus
+  error) and every driver path propagates it: setters, `WriteReg()` and `ProgramOTP()` return `false`, a
+  read-modify-write setter whose read fails writes nothing, and every failed frame sets the new
+  `AS5047U_Error::BusError` sticky flag. A `void` `transfer()` still compiles and is treated as never failing; any
+  other return type is rejected by `static_assert`. New `ReadReg(reg, retries)` overload returns whether the read
+  worked. Datasheet "SPI Transaction", Figures 29 and 30: a read or write is a fixed sequence of frames, so a frame
+  that was not clocked leaves the access incomplete.
 - **Breaking:** `GetStickyErrorFlags()` no longer clears the flags; the new `ClearStickyErrorFlags()` clears them
   and returns what it cleared. The measurement getters no longer consume the flags to decide on a retry (they use
   the ERRFL of their own read), so the flags of every sample stay visible until the caller clears them. Datasheet

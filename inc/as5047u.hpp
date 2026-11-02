@@ -17,19 +17,21 @@
 #include <functional> // for std::function
 #include <utility>    // for std::pair
 
-// Error flags from ERRFL register
+// Error flags: bits 0-10 are the ERRFL register (datasheet Figure 33); bits 11-15, which ERRFL does
+// not use, are errors the driver detects itself.
 enum class AS5047U_Error : uint16_t {
   None = 0,
-  AgcWarning = 1 << 0,     ///< AGC reached minimum (0) or maximum (255) value
-  MagHalf = 1 << 1,        ///< Magnetic field is half of regulated value (AGC=255)
-  P2ramWarning = 1 << 2,   ///< ECC corrected 1 bit in P2RAM customer area
-  P2ramError = 1 << 3,     ///< ECC detected 2+ uncorrectable errors in P2RAM
-  FramingError = 1 << 4,   ///< SPI framing error
-  CommandError = 1 << 5,   ///< Invalid SPI command received
-  CrcError = 1 << 6,       ///< CRC error during SPI communication
-  WatchdogError = 1 << 7,  ///< Internal oscillator or watchdog not working proper
-  OffCompError = 1 << 9,   ///< Internal offset compensation not finished
-  CordicOverflow = 1 << 10 ///< CORDIC algorithm overflow
+  AgcWarning = 1 << 0,      ///< AGC reached minimum (0) or maximum (255) value
+  MagHalf = 1 << 1,         ///< Magnetic field is half of regulated value (AGC=255)
+  P2ramWarning = 1 << 2,    ///< ECC corrected 1 bit in P2RAM customer area
+  P2ramError = 1 << 3,      ///< ECC detected 2+ uncorrectable errors in P2RAM
+  FramingError = 1 << 4,    ///< SPI framing error
+  CommandError = 1 << 5,    ///< Invalid SPI command received
+  CrcError = 1 << 6,        ///< CRC error during SPI communication
+  WatchdogError = 1 << 7,   ///< Internal oscillator or watchdog not working proper
+  OffCompError = 1 << 9,    ///< Internal offset compensation not finished
+  CordicOverflow = 1 << 10, ///< CORDIC algorithm overflow
+  BusError = 1 << 11        ///< Driver: the port's transfer() reported a bus error
 };
 
 // -----------------------------------------------------------------------------
@@ -438,6 +440,21 @@ public:
   }
 
   /**
+   * @brief Read a register and report whether the read succeeded.
+   *
+   * @tparam RegT The register type (has a static ADDRESS)
+   * @param reg Receives the register content (value 0 when the read failed)
+   * @param retries Number of retries on a failed read (default 0 = no retry)
+   * @return true if the read went through and the chip reported no CRC or
+   * framing error for it; false on a bus error or such a chip error. The
+   * reason is in the sticky flags (GetStickyErrorFlags()).
+   */
+  template <typename RegT>
+  [[nodiscard]] bool ReadReg(RegT& reg, uint8_t retries = AS5047U_CFG::CRC_RETRIES) const {
+    return readWithRetries(RegT::ADDRESS, retries, reg.value);
+  }
+
+  /**
    * @brief Writes data to a specified register in the AS5047U sensor
    *
    * @tparam RegT The register type which must have an ADDRESS static member and
@@ -445,7 +462,8 @@ public:
    * @param reg The register object containing the data to be written
    * @param retries Number of retries on CRC/framing error (default 0 = no
    * retry)
-   * @return true if write succeeded, false on CRC/framing error
+   * @return true if the value read back as written; false if it did not, or
+   * if the port's transfer() reported a bus error
    */
   template <typename RegT>
   bool WriteReg(const RegT& reg, uint8_t retries = AS5047U_CFG::CRC_RETRIES) {
@@ -501,13 +519,19 @@ private:
   // Low-level helpers
   //------------------------------------------------------------------
   // Low level register access helpers
-  uint16_t rawReadRegister(uint16_t addr) const; ///< read register without updating sticky errors
-  /// Read a register, then ERRFL (accumulated into the sticky flags). Returns the ERRFL value
-  /// read for this access (the register's own value when @p addr is ERRFL).
-  uint16_t readRegister(uint16_t addr, uint16_t& value) const;
+  static constexpr uint16_t kReadBit = 0x4000; ///< RW / R bit of a command frame: 1 = read
+
+  /// One SPI frame in @p format; @p reply is the 16-bit reply word. False on a bus error.
+  bool transferFrame(FrameFormat format, uint16_t word, uint16_t& reply) const;
+  /// Read a register (command frame, then a NOP for the reply) without reading ERRFL.
+  bool rawReadRegister(uint16_t addr, uint16_t& value) const;
+  /// Read a register, then ERRFL (accumulated into the sticky flags). False on a bus error or when
+  /// the chip reports a CRC or framing error for the access.
+  bool readRegister(uint16_t addr, uint16_t& value) const;
   uint16_t readRegister(uint16_t addr) const; ///< value only; errors go to the sticky flags
-  /// Read a register, repeating up to @p retries times while the chip reports a CRC or framing
-  /// error for the access. Never consumes the sticky flags.
+  /// readRegister(), repeated up to @p retries times while it fails. Never consumes the sticky
+  /// flags.
+  bool readWithRetries(uint16_t addr, uint8_t retries, uint16_t& value) const;
   uint16_t readWithRetries(uint16_t addr, uint8_t retries) const;
   bool writeRegister(uint16_t addr, uint16_t val, uint8_t retries) const;
 
@@ -545,7 +569,10 @@ AS5047U<SpiType>::AS5047U(SpiType& bus, FrameFormat format) noexcept
 
 template <typename SpiType>
 inline bool AS5047U<SpiType>::SetDirection(bool clockwise, uint8_t retries) {
-  auto s2 = ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!ReadReg(s2, retries)) {
+    return false;
+  }
   s2.bits.DIR = clockwise ? 0 : 1;
   return WriteReg(s2, retries);
 }

@@ -9,6 +9,22 @@
 
 using Encoder = as5047u::AS5047U<MockAs5047u>;
 
+namespace {
+// A port written for the earlier contract: transfer() returns void. Still accepted, never fails.
+class LegacyVoidPort : public as5047u::SpiInterface<LegacyVoidPort> {
+public:
+  MockAs5047u chip;
+  void transfer(const uint8_t* tx, uint8_t* rx, std::size_t len) {
+    (void)chip.transfer(tx, rx, len);
+  }
+};
+
+static_assert(as5047u::detail::kTransferReportsStatus<MockAs5047u>);
+static_assert(!as5047u::detail::kTransferReportsStatus<LegacyVoidPort>);
+
+constexpr auto kBusError = static_cast<uint16_t>(AS5047U_Error::BusError);
+} // namespace
+
 TEST_CASE("Velocity is a sign-extended 14-bit value in 24.141 deg/s per LSB") {
   MockAs5047u chip;
   Encoder enc(chip, FrameFormat::SPI_24);
@@ -174,4 +190,83 @@ TEST_CASE("Angle output source selects what address 0x3FFF returns") {
   CHECK(enc.SetAngleOutputSource(AS5047U_REG::SETTINGS2::AngleOutputSource::UseANGLEUNC));
   CHECK_EQ(enc.GetAngle(), 200);
   CHECK(enc.GetAngleOutputSource() == AS5047U_REG::SETTINGS2::AngleOutputSource::UseANGLEUNC);
+}
+
+TEST_CASE("A port that returns void still works and never fails") {
+  LegacyVoidPort port;
+  as5047u::AS5047U<LegacyVoidPort> enc(port, FrameFormat::SPI_24);
+  port.chip.regs[AS5047U_REG::ANGLECOM::ADDRESS] = 4321;
+  CHECK_EQ(enc.GetAngle(), 4321);
+  CHECK(enc.SetDirection(false));
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), 0U);
+}
+
+TEST_CASE("A bus error from transfer() fails every write path") {
+  // Figures 29 and 30: a read or write is a fixed sequence of frames, each in its own CSn period;
+  // a frame that was not clocked leaves the access incomplete, so the call must fail.
+  for (int good = 0; good < 6; ++good) { // fail the read-modify-write at each of its frames
+    MockAs5047u chip;
+    Encoder enc(chip, FrameFormat::SPI_24);
+    chip.transfers_before_failure = good;
+    CHECK(!enc.SetDirection(false));
+    CHECK_EQ(chip.regs[AS5047U_REG::SETTINGS2::ADDRESS], 0U); // no partial or garbage write
+    CHECK(static_cast<uint16_t>(enc.GetStickyErrorFlags()) & kBusError);
+  }
+
+  MockAs5047u chip;
+  Encoder enc(chip, FrameFormat::SPI_24);
+  chip.transfers_before_failure = 0;
+  AS5047U_REG::ZPOSM m{};
+  m.bits.ZPOSM_bits = 0x12;
+  CHECK(!enc.WriteReg(m));
+  CHECK(!enc.SetZeroPosition(100));
+  CHECK(!enc.SetABIResolution(12));
+  CHECK(!enc.SetUVWPolePairs(3));
+  CHECK(!enc.SetIndexPulseLength(1));
+  CHECK(!enc.ConfigureInterface(true, false, false));
+  CHECK(!enc.SetDynamicAngleCompensation(false));
+  CHECK(!enc.SetAdaptiveFilter(false));
+  CHECK(!enc.SetFilterParameters(1, 2));
+  CHECK(!enc.SetFilterPreset(FilterPreset::Balanced));
+  CHECK(!enc.Set150CTemperatureMode(true));
+  CHECK(!enc.SetHysteresis(AS5047U_REG::SETTINGS3::Hysteresis::NONE));
+  CHECK(!enc.SetAngleOutputSource(AS5047U_REG::SETTINGS2::AngleOutputSource::UseANGLEUNC));
+
+  // A write whose verification NOP fails is not reported as written, even though the chip took it.
+  MockAs5047u chip2;
+  Encoder enc2(chip2, FrameFormat::SPI_24);
+  chip2.transfers_before_failure = 2;
+  CHECK(!enc2.WriteReg(m));
+}
+
+TEST_CASE("A bus error during a read is reported, and retried") {
+  MockAs5047u chip;
+  Encoder enc(chip, FrameFormat::SPI_24);
+  chip.regs[AS5047U_REG::ANGLECOM::ADDRESS] = 1234;
+
+  chip.transfers_before_failure = 1; // the NOP that carries the data fails
+  CHECK_EQ(enc.GetAngle(), 0);
+  CHECK_EQ(static_cast<uint16_t>(enc.ClearStickyErrorFlags()), kBusError);
+
+  chip.transfers_before_failure = -1;
+  AS5047U_REG::ANGLECOM a{};
+  CHECK(enc.ReadReg(a));
+  CHECK_EQ(a.bits.ANGLECOM_value, 1234);
+  chip.transfers_before_failure = 0;
+  CHECK(!enc.ReadReg(a));
+  CHECK_EQ(a.value, 0U);
+
+  chip.transfers_before_failure = -1;
+  chip.transfers = 0;
+  chip.fail_transfer_at = 2; // the first attempt's ERRFL command fails; the retry goes through
+  CHECK_EQ(enc.GetAngle(1), 1234);
+  CHECK_EQ(chip.transfers, 7U); // 3 of the failed attempt (stops at the error) + 4
+  CHECK(static_cast<uint16_t>(enc.GetStickyErrorFlags()) & kBusError);
+
+  chip.transfers = 0;
+  chip.fail_transfer_at = 0;
+  (void)enc.ClearStickyErrorFlags();
+  CHECK_EQ(enc.GetErrorFlags(1), 0U); // ERRFL read retried after the bus error
+  CHECK_EQ(chip.transfers, 3U);       // 1 failed + 2
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), kBusError);
 }

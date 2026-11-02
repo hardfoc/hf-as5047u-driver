@@ -4,7 +4,8 @@ Reads: From top to bottom. Your application talks to one AS5047U<SpiType> object
 chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check
 writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in
 inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class
-whose transfer() moves one frame over SPI with chip select held low. Below it is the hardware.
+whose transfer() moves one frame over SPI with chip select held low and returns false on a bus error. Below it is
+the hardware.
 """
 
 import re
@@ -20,7 +21,7 @@ SPI = "inc/as5047u_spi_interface.hpp"
 def data():
     regs = re.findall(r"^struct (\w+) \{\n\s+static constexpr uint16_t ADDRESS", (ROOT / REGS).read_text(), re.M)
     spi = (ROOT / SPI).read_text()
-    hooks = re.findall(r"^  void (\w+)\(const uint8_t", spi, re.M)
+    hooks = re.findall(r"^  bool (\w+)\(const uint8_t", spi, re.M)
     return {
         "registers": regs,
         "port_hooks": hooks,
@@ -52,7 +53,7 @@ def build(d):
                    "the CRC-8, the one-frame-late reads and the read-back check of every write"],
                   tone="brand", accent=True)
     port = f.card(0, comm.b + 40, W, "Platform port (your class)",
-                  ["  ".join(h + "(tx, rx, len)" for h in d["port_hooks"])],
+                  ["  ".join("bool " + h + "(tx, rx, len)" for h in d["port_hooks"])],
                   tone="teal", accent=True, mono=True)
     hw = f.card(0, port.b + 40, W, "AS5047U", ["SPI mode 1 up to 10 MHz  /  CSn, CLK, MOSI, MISO"], tone="slate")
     for a, b in ((app, reg), (reg, comm), (comm, port), (port, hw)):

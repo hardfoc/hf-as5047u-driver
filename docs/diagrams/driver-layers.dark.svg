@@ -66,7 +66,7 @@
 <text x="56" y="507" font-size="17" fill="#D2DAE4">SpiInterface&lt;Derived&gt;: CRTP base, no virtual calls. The driver builds 16-, 24- or 32-bit frames,</text>
 <text x="56" y="531.7" font-size="17" fill="#D2DAE4">the CRC-8, the one-frame-late reads and the read-back check of every write</text>
 <text x="56" y="630.4" font-size="20" font-weight="700" fill="#A7F3E6">Platform port (your class)</text>
-<text x="56" y="659.6" font-size="16" font-family="'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace" fill="#D2DAE4">transfer(tx, rx, len)</text>
+<text x="56" y="659.6" font-size="16" font-family="'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace" fill="#D2DAE4">bool transfer(tx, rx, len)</text>
 <text x="56" y="758.4" font-size="20" font-weight="700" fill="#E8EDF3">AS5047U</text>
 <text x="56" y="789" font-size="17" fill="#D2DAE4">SPI mode 1 up to 10 MHz  /  CSn, CLK, MOSI, MISO</text>
 <rect x="32" y="824.8" width="14" height="14" rx="4" fill="#1C1F3D" stroke="#8C93FF" stroke-width="1.4"/>
