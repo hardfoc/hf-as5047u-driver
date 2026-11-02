@@ -12,6 +12,9 @@ All notable changes to this driver are listed here. The format follows
 
 ### Changed
 
+- CI builds all five ESP32 example apps (`ci_enabled` in `examples/esp32/app_config.yml`); only
+  `driver_integration_test` was built before. `configuration_example` and `full_features` now check each setter's
+  result and report the sticky flags of a failed one.
 - **Breaking (port contract):** the SPI port's `transfer()` returns `bool` (`true` = frame clocked, `false` = bus
   error) and every driver path propagates it: setters, `WriteReg()` and `ProgramOTP()` return `false`, a
   read-modify-write setter whose read fails writes nothing, and every failed frame sets the new
