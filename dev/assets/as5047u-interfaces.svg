@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 540" width="880" height="540" role="img" aria-labelledby="t-as d-as">
+  <title id="t-as">AS5047U magnetic encoder, all output interfaces</title>
+  <desc id="d-as">A diametrically magnetized rotor sits over the AS5047U which exposes four output interfaces simultaneously: SPI (host control), incremental ABI (A/B/I), three-phase commutation UVW, and PWM-encoded angle.</desc>
+  <defs>
+    <style type="text/css"><![CDATA[
+      .panel    { fill: #ffffff; }
+      .box      { fill: #f4f6f8; stroke: #1a365d; stroke-width: 2; }
+      .chip     { fill: #fef5e7; stroke: #c05621; stroke-width: 2; }
+      .npart    { fill: #fed7d7; stroke: #c53030; stroke-width: 1.5; }
+      .spart    { fill: #c6f6d5; stroke: #276749; stroke-width: 1.5; }
+      .iface-spi { fill: #ebf4ff; stroke: #2c5282; stroke-width: 1.6; }
+      .iface-abi { fill: #fef5e7; stroke: #c05621; stroke-width: 1.6; }
+      .iface-uvw { fill: #f0fff4; stroke: #276749; stroke-width: 1.6; }
+      .iface-pwm { fill: #fff5f5; stroke: #c53030; stroke-width: 1.6; }
+      .wire     { stroke: #2b6cb0; stroke-width: 2.2; fill: none; stroke-linecap: round; }
+      .wire-pwr { stroke: #c53030; stroke-width: 2.2; fill: none; stroke-linecap: round; }
+      .wire-gnd { stroke: #4a5568; stroke-width: 2.2; fill: none; stroke-linecap: round; }
+      .head     { font-family: system-ui, sans-serif; font-size: 16px; font-weight: 600; fill: #1a365d; text-anchor: middle; }
+      .title    { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; fill: #1a365d; text-anchor: middle; }
+      .titleL   { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; fill: #1a365d; text-anchor: start; }
+      .small    { font-family: system-ui, sans-serif; font-size: 11px; fill: #4a5568; text-anchor: middle; }
+      .smallL   { font-family: system-ui, sans-serif; font-size: 11px; fill: #4a5568; text-anchor: start; }
+      .pin      { font-family: "DejaVu Sans Mono", Consolas, monospace; font-size: 11px; fill: #1a202c; text-anchor: middle; }
+      .pinL     { font-family: "DejaVu Sans Mono", Consolas, monospace; font-size: 11px; fill: #1a202c; text-anchor: start; }
+      .pole     { font-family: system-ui, sans-serif; font-size: 14px; font-weight: 700; text-anchor: middle; }
+      .legend   { font-family: system-ui, sans-serif; font-size: 11px; fill: #4a5568; }
+    ]]></style>
+    <marker id="ar-as" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 z" fill="#2b6cb0"/>
+    </marker>
+  </defs>
+  <rect class="panel" width="880" height="540"/>
+
+  <text class="head" x="440" y="26">AS5047U - magnetic rotary encoder, all output interfaces</text>
+  <text class="small" x="440" y="44">Diametrically magnetized rotor -> on-die Hall array (DAEC + DFS) -> simultaneous SPI / ABI / UVW / PWM outputs.</text>
+
+  <!--
+    Layout (left to right):
+      column A (60..220)  : rotor + AS5047U package
+      column B (260..440) : (gap, used for visual signal flow arrows)
+      column C (440..760) : 4 interface output boxes stacked vertically
+      column D (780..860) : MCU side pin block
+  -->
+
+  <!-- Rotor (top of column A) -->
+  <g transform="translate(140, 160)">
+    <circle cx="0" cy="0" r="68" fill="#ffffff" stroke="#1a365d" stroke-width="2"/>
+    <!-- Diametrically split: left red half = N pole, right green half = S pole -->
+    <path class="npart" d="M 0 -68 A 68 68 0 0 0 0 68 Z"/>
+    <path class="spart" d="M 0 -68 A 68 68 0 0 1 0 68 Z"/>
+    <line x1="0" y1="-68" x2="0" y2="68" stroke="#1a365d" stroke-width="1.5"/>
+    <text class="pole" x="-34" y="6" fill="#c53030">N</text>
+    <text class="pole" x="34"  y="6" fill="#276749">S</text>
+
+    <!-- Rotation arrow around the rotor -->
+    <path d="M 0 -88 A 88 88 0 0 1 62 -62" fill="none" stroke="#2b6cb0" stroke-width="2.2" marker-end="url(#ar-as)"/>
+    <text class="small" x="40" y="-90">omega (mech.)</text>
+
+    <text class="small" x="0" y="92">Diametrically magnetized rotor</text>
+  </g>
+
+  <!-- AS5047U sensor package (bottom of column A) -->
+  <rect class="chip" x="40" y="300" width="200" height="100" rx="8"/>
+  <text class="head"  x="140" y="326">AS5047U</text>
+  <text class="small" x="140" y="346">14-bit absolute &#183; CRC SPI</text>
+  <text class="small" x="140" y="362">DAEC + DFS &#183; stray-field immune</text>
+  <text class="small" x="140" y="382">programmable ABI / UVW / PWM</text>
+
+  <!-- Magnetic coupling indicator (rotor -> sensor) -->
+  <line stroke="#1a365d" stroke-dasharray="4 3" stroke-width="1.5" x1="140" y1="232" x2="140" y2="300"/>
+  <text class="smallL" x="148" y="270">B-field over die</text>
+
+  <!--
+    4 interface output boxes in column C (x=440..760), evenly distributed vertically.
+    Each box is 320 wide, ~50 tall, centered around y=120, 220, 320, 420.
+    A short, clean arrow from sensor (x=240) to each interface box (x=440).
+  -->
+  <g>
+    <!-- SPI -->
+    <rect class="iface-spi" x="440" y="100" width="320" height="60" rx="6"/>
+    <text class="title" x="600" y="122">SPI (host control)</text>
+    <text class="small" x="600" y="140">SCLK &#183; MOSI &#183; MISO &#183; CS  &#183;  SPI_24 frame with CRC</text>
+    <text class="small" x="600" y="154">absolute angle &#183; velocity &#183; diagnostics &#183; OTP</text>
+
+    <!-- ABI -->
+    <rect class="iface-abi" x="440" y="180" width="320" height="60" rx="6"/>
+    <text class="title" x="600" y="202">ABI (incremental quadrature)</text>
+    <text class="small" x="600" y="220">A &#183; B &#183; I (index)  &#183;  programmable resolution</text>
+    <text class="small" x="600" y="234">10..14 bits per revolution (up to 4096 PPR)</text>
+
+    <!-- UVW -->
+    <rect class="iface-uvw" x="440" y="260" width="320" height="60" rx="6"/>
+    <text class="title" x="600" y="282">UVW (3-phase commutation)</text>
+    <text class="small" x="600" y="300">U &#183; V &#183; W block-commutation signals</text>
+    <text class="small" x="600" y="314">programmable pole pairs (1..7)</text>
+
+    <!-- PWM -->
+    <rect class="iface-pwm" x="440" y="340" width="320" height="60" rx="6"/>
+    <text class="title" x="600" y="362">PWM (single-wire angle)</text>
+    <text class="small" x="600" y="380">duty cycle proportional to angle</text>
+    <text class="small" x="600" y="394">single-pin readout, no SPI required</text>
+  </g>
+
+  <!-- Sensor -> interface arrows (clean L-shaped routing from sensor right edge x=240, y=350) -->
+  <g>
+    <!-- Trunk: sensor (x=240, y=350) -> hub (x=350, y=350) -->
+    <line class="wire" x1="240" y1="350" x2="350" y2="350"/>
+    <!-- Vertical riser at x=350 from y=130 to y=370 -->
+    <line class="wire" x1="350" y1="130" x2="350" y2="370"/>
+    <!-- Branches into each interface box -->
+    <line class="wire" x1="350" y1="130" x2="440" y2="130" marker-end="url(#ar-as)"/>
+    <line class="wire" x1="350" y1="210" x2="440" y2="210" marker-end="url(#ar-as)"/>
+    <line class="wire" x1="350" y1="290" x2="440" y2="290" marker-end="url(#ar-as)"/>
+    <line class="wire" x1="350" y1="370" x2="440" y2="370" marker-end="url(#ar-as)"/>
+  </g>
+
+  <!-- MCU side block (column D) -->
+  <rect class="box" x="780" y="100" width="80" height="300" rx="6"/>
+  <text class="title" x="820" y="122">MCU side</text>
+  <text class="pin"   x="820" y="146">3V3 / 5V0</text>
+  <text class="pin"   x="820" y="172">SPI</text>
+  <text class="pin"   x="820" y="200">ABI in</text>
+  <text class="pin"   x="820" y="228">UVW in</text>
+  <text class="pin"   x="820" y="256">PWM in</text>
+  <text class="pin"   x="820" y="282">GND</text>
+
+  <!-- VDD/GND wires from MCU directly to sensor (bypass interface boxes) -->
+  <path class="wire-pwr" d="M 780 144 L 770 144 L 770 80 L 140 80 L 140 300"/>
+  <text class="smallL" x="280" y="74">VDD (3.3 V or 5.0 V)</text>
+  <path class="wire-gnd" d="M 780 282 L 770 282 L 770 420 L 140 420 L 140 400"/>
+  <text class="smallL" x="280" y="416">GND</text>
+
+  <!-- Bottom legend in its own row (y=460..490) -->
+  <g transform="translate(40, 470)">
+    <text class="titleL" x="0" y="0" fill="#1a365d">Legend</text>
+    <rect class="iface-spi" x="80"  y="-10" width="14" height="14"/>
+    <text class="legend" x="100" y="0">SPI control</text>
+    <rect class="iface-abi" x="200" y="-10" width="14" height="14"/>
+    <text class="legend" x="220" y="0">ABI quadrature</text>
+    <rect class="iface-uvw" x="340" y="-10" width="14" height="14"/>
+    <text class="legend" x="360" y="0">UVW commutation</text>
+    <rect class="iface-pwm" x="490" y="-10" width="14" height="14"/>
+    <text class="legend" x="510" y="0">PWM angle</text>
+  </g>
+  <g transform="translate(40, 498)">
+    <line class="wire-pwr" x1="80"  y1="-3" x2="104" y2="-3"/>
+    <text class="legend" x="112" y="0">Power (VDD)</text>
+    <line class="wire-gnd" x1="200" y1="-3" x2="224" y2="-3"/>
+    <text class="legend" x="232" y="0">Ground</text>
+    <line class="wire" x1="320" y1="-3" x2="344" y2="-3" marker-end="url(#ar-as)"/>
+    <text class="legend" x="352" y="0">Sensor signal output</text>
+    <line stroke="#1a365d" stroke-dasharray="4 3" stroke-width="1.5" x1="490" y1="-3" x2="514" y2="-3"/>
+    <text class="legend" x="522" y="0">Magnetic coupling (rotor over die)</text>
+  </g>
+</svg>
