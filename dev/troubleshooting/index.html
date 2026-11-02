@@ -1424,7 +1424,8 @@ registers in one go, and tells transport problems (all zeros, all ones) apart fr
 </tbody>
 </table>
 <h2 id="crc-or-framing-errors">CRC or framing errors<a class="headerlink" href="#crc-or-framing-errors" title="Permanent link">&para;</a></h2>
-<p><code>CrcError</code> or <code>FramingError</code> in the sticky flags or in <code>GetErrorFlags()</code>.</p>
+<p><code>CrcError</code> or <code>FramingError</code> in the sticky flags or in <code>GetErrorFlags()</code> (the chip saw a bad MOSI frame), or
+<code>ReplyCrcError</code> in the sticky flags (the driver saw a bad MISO frame).</p>
 <table>
 <thead>
 <tr>
@@ -1525,28 +1526,35 @@ with a high filter K. Detect "stopped" with a threshold, not with zero.</p>
 <p>The settings registers are volatile until OTP is burned: this is expected. Burn them with <code>ProgramOTP()</code> once you
 are sure of them (<a href="../otp/">OTP programming</a>).</p>
 <h2 id="a-setter-returns-false">A setter returns false<a class="headerlink" href="#a-setter-returns-false" title="Permanent link">&para;</a></h2>
-<p>The value did not read back as written. The driver prints a line like this (through <code>printf</code>):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>AS5047U write verify failed: addr=0x0019 expected=0x0004 read_back=0x0000 ERRFL=0x0040 (CRC_error=1 Framing_error=0 Command_error=0)
-</span></code></pre></div>
+<p>The value did not read back as written, or a frame of the write failed. The driver prints nothing; clear the sticky
+flags, call the setter again and read them:</p>
 <table>
 <thead>
 <tr>
-<th>ERRFL bits in the line</th>
+<th>Sticky flags after the call</th>
 <th>Cause</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>CRC_error=1</code></td>
+<td><code>CrcError</code></td>
 <td>The write frame was corrupted on the bus: see CRC errors above</td>
 </tr>
 <tr>
-<td><code>Framing_error=1</code> or <code>Command_error=1</code></td>
+<td><code>FramingError</code> or <code>CommandError</code></td>
 <td>Frame length or chip select</td>
 </tr>
 <tr>
-<td>All 0, read-back still different</td>
-<td>The register or field is read-only</td>
+<td><code>BusError</code></td>
+<td>The port's <code>transfer()</code> returned <code>false</code></td>
+</tr>
+<tr>
+<td><code>ReplyCrcError</code></td>
+<td>A reply was corrupted on MISO: see CRC errors above</td>
+</tr>
+<tr>
+<td>None</td>
+<td>The register or field is read-only, or the value does not stick</td>
 </tr>
 </tbody>
 </table>

@@ -1364,7 +1364,7 @@
 <p>The three frame formats, the CRC, and the frame sequences the driver sends for a read and a write, with what each
 costs on the bus.</p>
 <p>The source is the datasheet's "SPI Transaction" section (Figures 20 to 31). The driver's side is
-<code>rawReadRegister()</code> and <code>writeRegister()</code> in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/src/as5047u.ipp"><code>src/as5047u.ipp</code></a>.</p>
+<code>rawReadRegister()</code> and <code>writeRegister()</code> in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/src/as5047u.ipp"><code>src/as5047u.ipp</code></a>.</p>
 <h2 id="frame-formats">Frame formats<a class="headerlink" href="#frame-formats" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1397,7 +1397,9 @@ costs on the bus.</p>
 </tbody>
 </table>
 <p>RW is 1 for a read and 0 for a write. The warning and error bits report a problem in the <strong>previous</strong> command
-frame; the details are in ERRFL.</p>
+frame; the details are in ERRFL. The driver records them from every reply with a valid CRC (every 16-bit reply) as
+the sticky flags <code>ReplyWarning</code> and <code>ReplyError</code>. They do not fail the access: the data in the reply is still the
+register content, and the ERRFL read that follows every access says what the problem was.</p>
 <p>Pick the format with the constructor or <code>SetFrameFormat()</code>:</p>
 <table>
 <thead>
@@ -1469,9 +1471,11 @@ frame; the details are in ERRFL.</p>
 <p>The initial value makes an all-zero frame invalid: <code>0x000000</code> would otherwise be a valid command. The driver
 computes it with <code>AS5047U&lt;&gt;::ComputeCRC8(uint16_t)</code>, a <code>constexpr</code> function; the host tests check it against an
 independent implementation for all 65536 inputs.</p>
-<p>A frame whose CRC is wrong is not executed and sets <code>CRC_error</code> in ERRFL. The driver also computes the CRC of each
-24- and 32-bit reply but does not act on a mismatch: errors reach your code through ERRFL and the sticky flags
-(<a href="../api-guide/#handle-errors">API guide</a>).</p>
+<p>A frame whose CRC is wrong is not executed and sets <code>CRC_error</code> in ERRFL. In the other direction the driver checks
+the CRC of every 24- and 32-bit reply whose content it uses (the data of a read, the ERRFL value, both replies of
+a write): a mismatch means the reply was corrupted on MISO, so the access fails, sets the <code>ReplyCrcError</code> sticky
+flag and is repeated when the call has <code>retries</code> left. A read that fails this way returns 0, never the corrupted
+value (<a href="../api-guide/#handle-errors">API guide</a>). 16-bit frames carry no CRC, so nothing protects their replies.</p>
 <h2 id="read">Read<a class="headerlink" href="#read" title="Permanent link">&para;</a></h2>
 <p>The chip executes a command at the rising edge of CSn and returns the result during the next frame. One driver
 read is therefore four frames: the read command, a NOP that clocks the data out, then the same for ERRFL, so that
@@ -1502,8 +1506,8 @@ next frame and compares what comes back with what it wrote.</p>
     D-&gt;&gt;C: read NOP
     C--&gt;&gt;D: new content of n
     Note over D: equal: return true. Different: read ERRFL, retry or return false</code></pre>
-<p>On a mismatch the driver reads ERRFL, prints one line with the address, the expected and the read-back value and
-the CRC, framing and command error bits (through <code>printf</code>), and tries again up to <code>retries</code> times.</p>
+<p>On a mismatch the driver reads ERRFL, which goes into the sticky flags, and tries again up to <code>retries</code> times. It
+prints nothing: the reason for a failed write is in <code>GetStickyErrorFlags()</code>.</p>
 <h2 id="what-a-call-costs">What a call costs<a class="headerlink" href="#what-a-call-costs" title="Permanent link">&para;</a></h2>
 <p>Frames per call, from the sequences above. Times are derived for 24-bit frames at 10 MHz (2.4 µs of clock per
 frame, plus at least 350 ns of CSn high between frames and your port's own overhead); they are not measurements.</p>
@@ -1543,7 +1547,8 @@ frame, plus at least 350 ns of CSn high between frames and your port's own overh
 </tr>
 </tbody>
 </table>
-<p>A failed write verification adds four frames for ERRFL and repeats the write.</p>
+<p>A failed write verification adds four frames for ERRFL and repeats the write. A rejected reply (wrong CRC) ends the
+access at that frame; a retry starts it again.</p>
 <h2 id="daisy-chains-and-the-pad-byte">Daisy chains and the PAD byte<a class="headerlink" href="#daisy-chains-and-the-pad-byte" title="Permanent link">&para;</a></h2>
 <p>In a 32-bit frame the PAD byte leads the MOSI frame and trails the MISO frame. The datasheet allows any number of
 PAD bits before the MOSI data so that the host can tell which device's reply it is reading. The driver sends one

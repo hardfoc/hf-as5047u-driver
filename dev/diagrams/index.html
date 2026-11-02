@@ -1206,14 +1206,14 @@ committed figure no longer matches the code. Each figure below lists the files i
 
 <details class="hf-figure-desc">
 <summary>Figure description and sources</summary>
-<p>From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low. Below it is the hardware.</p>
-<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
+<p>From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low and returns false on a bus error. Below it is the hardware.</p>
+<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
 </details>
-<p>Figure module: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a></p>
+<p>Figure module: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a></p>
 <p>Drawn from:</p>
 <ul>
-<li><code>register structs</code> in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a></li>
-<li><code>SpiInterface</code> in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a></li>
+<li><code>register structs</code> in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a></li>
+<li><code>SpiInterface</code> in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a></li>
 </ul>
 
 

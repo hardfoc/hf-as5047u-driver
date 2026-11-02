@@ -1347,8 +1347,8 @@
 
 <details class="hf-figure-desc">
 <summary>Figure description and sources</summary>
-<p>From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low. Below it is the hardware.</p>
-<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
+<p>From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low and returns false on a bus error. Below it is the hardware.</p>
+<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
 </details>
 <h2 id="the-three-layers">The three layers<a class="headerlink" href="#the-three-layers" title="Permanent link">&para;</a></h2>
 <table>
@@ -1362,12 +1362,12 @@
 <tbody>
 <tr>
 <td><strong>Core</strong>: <code>AS5047U&lt;SpiType&gt;</code>, typed registers</td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u.hpp"><code>inc/as5047u.hpp</code></a> and the headers beside it</td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u.hpp"><code>inc/as5047u.hpp</code></a> and the headers beside it</td>
 <td>Never, for a new board</td>
 </tr>
 <tr>
 <td><strong>SPI interface</strong>: <code>SpiInterface&lt;&gt;</code></td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_spi_interface.hpp"><code>as5047u_spi_interface.hpp</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_spi_interface.hpp"><code>as5047u_spi_interface.hpp</code></a></td>
 <td>Never</td>
 </tr>
 <tr>
@@ -1395,7 +1395,9 @@ how the <a href="../testing/">host tests</a> run the real driver code without ha
     P-&gt;&gt;C: three frames
     C--&gt;&gt;D: new SETTINGS2 content on the last frame
     D--&gt;&gt;A: true if it matches what was written</code></pre>
-<p>Each setter is a read-modify-write of one register, so it leaves the other fields of that register as they were.</p>
+<p>Each setter is a read-modify-write of one register, so it leaves the other fields of that register as they were.
+If a <code>transfer()</code> returns <code>false</code>, or a reply the driver uses has a wrong CRC, the call stops at that frame and
+returns <code>false</code>; when that happens during the read, nothing is written.</p>
 <h2 id="why-crtp">Why CRTP<a class="headerlink" href="#why-crtp" title="Permanent link">&para;</a></h2>
 <p>The interface is a class template parameter, not a virtual base class. The compiler sees your port's
 <code>transfer()</code> directly and can inline it; the driver has no vtable, allocates nothing and needs no RTTI. The

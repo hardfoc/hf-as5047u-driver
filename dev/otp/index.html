@@ -1337,7 +1337,9 @@ scrapped. Program on the bench first and verify every setting in volatile form b
 </tbody>
 </table>
 <h2 id="the-datasheet-sequence-and-the-driver">The datasheet sequence and the driver<a class="headerlink" href="#the-datasheet-sequence-and-the-driver" title="Permanent link">&para;</a></h2>
-<p>The datasheet's step-by-step procedure (Figure 60) and what <code>ProgramOTP()</code> does at each step:</p>
+<p>The datasheet's step-by-step procedure (page 41-42, flowchart Figure 60) and what <code>ProgramOTP()</code> does at each
+step. The driver checks the result of every step and stops at the first that fails; <code>OtpResult::failed_step</code>
+names it.</p>
 <table>
 <thead>
 <tr>
@@ -1358,59 +1360,94 @@ scrapped. Program on the bench first and verify every setting in volatile form b
 <td>Your job: call the setters before <code>ProgramOTP()</code></td>
 </tr>
 <tr>
-<td>3 to 5</td>
-<td>Place the magnet at zero, read ANGLECOM, write it into ZPOSM / ZPOSL</td>
-<td>Done: <code>SetZeroPosition(GetAngle())</code></td>
+<td>3</td>
+<td>Place the magnet at the zero position</td>
+<td>Your job</td>
 </tr>
 <tr>
-<td>6 to 9</td>
-<td>Read 0x0016..0x001A, set <code>ECC_en</code>, read <code>ECC_s</code> from 0x3FD0, write it into ECC</td>
-<td>Done</td>
+<td>4, 5</td>
+<td>Read ANGLECOM, write it into ZPOSL[5:0] and ZPOSM[7:0]</td>
+<td>Done, each write verified</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Read the settings</td>
+<td>Done, 0x0015..0x001B</td>
+</tr>
+<tr>
+<td>7 to 9</td>
+<td>ECC = <code>0x80</code> (<code>ECC_en</code>), read <code>ECC_s</code> from 0x3FD0, ECC = <code>0x80</code> | <code>ECC_s</code></td>
+<td>Done, each write verified</td>
 </tr>
 <tr>
 <td>10, 11</td>
-<td>Read the settings back and compare</td>
-<td>Done for 0x0016..0x001A; returns <code>false</code> on a difference</td>
+<td>Read the settings back and compare with what was written</td>
+<td>Done, 0x0015..0x001B</td>
 </tr>
 <tr>
-<td>12 to 14</td>
-<td><code>PROGEN</code> = 1, <code>PROGOTP</code> = 1, poll PROG until it reads <code>0x0001</code></td>
-<td>Done; gives up after 15000 polls and returns <code>false</code></td>
+<td>12</td>
+<td>PROG = <code>0x01</code> (<code>PROGEN</code>)</td>
+<td>Done, verified</td>
+</tr>
+<tr>
+<td>13</td>
+<td>PROG = <code>0x08</code> (<code>PROGOTP</code>): the burn starts</td>
+<td>Sent once, never retried; <code>burn_started</code> is set</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Poll PROG until it reads <code>0x0001</code></td>
+<td>Done; gives up after 15000 polls</td>
 </tr>
 <tr>
 <td>15</td>
-<td>Clear the volatile registers (write 0)</td>
-<td>Not done</td>
+<td>Clear the volatile registers: <code>0x0000</code> into 0x0015..0x001B</td>
+<td>Done, each write verified</td>
 </tr>
 <tr>
-<td>16 to 19</td>
-<td><code>PROGVER</code> = 1 (guard band), <code>OTPREF</code> = 1 (reload from OTP), compare</td>
-<td>Done, compares 0x0016..0x001A</td>
+<td>16, 17</td>
+<td>PROG = <code>0x40</code> (<code>PROGVER</code>, guard band), PROG = <code>0x04</code> (<code>OTPREF</code>, reload from OTP)</td>
+<td>Done; the chip must accept each frame (no CRC, framing or command error)</td>
+</tr>
+<tr>
+<td>18, 19</td>
+<td>Read 0x0015..0x001B, compare with step 10 (guard-band test)</td>
+<td>Done; returns <code>false</code> on a difference</td>
 </tr>
 <tr>
 <td>20 to 22</td>
 <td>Power-on cycle, read back, compare</td>
-<td>Your job, after the call</td>
+<td>Your job, after the call: <code>VerifyOTP(result.written)</code></td>
 </tr>
 </tbody>
 </table>
-<p><code>ProgramOTP()</code> switches to 24-bit frames for the duration when the driver is in <code>SPI_16</code> mode and restores the
-format afterwards.</p>
+<p>The step text reads 0x0016..0x001A or 0x001B; Figure 60 reads and clears 0x0015 (DISABLE) too, which is also a
+non-volatile register, so the driver reads and compares all seven, 0x0015..0x001B. The PROG values are those of
+Figure 60. Steps 12 to 17 always use frames with CRC: <code>ProgramOTP()</code> switches to 24-bit frames for the duration
+when the driver is in <code>SPI_16</code> mode and restores the format afterwards.</p>
+<p>Step 4 reads ANGLECOM, which already includes the zero position and the direction: start from a power-on cycle
+(ZPOSM = ZPOSL = 0) as step 1 asks, or the new zero is offset by the old one.</p>
 <div class="admonition warning">
-<p class="admonition-title">Verify after a power cycle</p>
-<p>Because step 15 is skipped, the guard-band comparison inside <code>ProgramOTP()</code> can pass on values that were still
-in the volatile registers. The power-on check in steps 20 to 22 is the one that proves the burn: cycle the
-supply, read DISABLE, ZPOSM, ZPOSL, SETTINGS1 to 3 and ECC, and compare them with what you wrote.</p>
+<p class="admonition-title">A failure after the burn started</p>
+<p><code>failed_step</code> 4 to 12 means nothing was burned (<code>burn_started</code> is false): fix the cause and try again. From step
+13 on the fuses may be burned. A part that fails step 19, or the power-on check in steps 20 to 22, must not be
+used: the datasheet does not allow reprogramming.</p>
 </div>
 <h2 id="use-it">Use it<a class="headerlink" href="#use-it" title="Permanent link">&para;</a></h2>
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// The settings are in the volatile registers (configure() above), the magnet is</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1">// at the zero position, VDD is 4.5 to 5.5 V (5 V mode) or 3.3 to 3.5 V (3.3 V</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">// mode), and the chip is at 5 to 45 C.</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">encoder</span><span class="p">.</span><span class="n">ProgramOTP</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// current angle becomes zero, then burns. Once.</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w">               </span><span class="c1">// read-back did not match: do not use the part</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span><span class="w">  </span><span class="c1">// now power-cycle and compare the settings again</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">as5047u</span><span class="o">::</span><span class="n">OtpResult</span><span class="w"> </span><span class="n">result</span><span class="p">{};</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">encoder</span><span class="p">.</span><span class="n">ProgramOTP</span><span class="p">(</span><span class="o">&amp;</span><span class="n">result</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// current angle becomes zero, then burns. Once.</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">printf</span><span class="p">(</span><span class="s">"OTP step %u failed%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span><span class="o">&gt;</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">failed_step</span><span class="p">),</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">              </span><span class="n">result</span><span class="p">.</span><span class="n">burn_started</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">": do not use the part"</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">", nothing burned"</span><span class="p">);</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">}</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1">// Step 20: cycle the supply, then steps 21 and 22:</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="k">return</span><span class="w"> </span><span class="n">encoder</span><span class="p">.</span><span class="n">VerifyOTP</span><span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">written</span><span class="p">);</span>
 </span></code></pre></div>
+<p><code>VerifyOTP()</code> is the power-on check of steps 21 and 22: after cycling the supply it reads 0x0015..0x001B and compares
+them with <code>OtpResult::written</code>, the image that was burned.</p>
 <p>Next: <a href="../configuration/">Configuration</a> lists every setting the burn makes permanent.</p>
 
 

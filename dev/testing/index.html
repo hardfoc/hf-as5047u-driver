@@ -1321,13 +1321,19 @@
 static analysis, on every pull request.</p>
 <h2 id="host-unit-tests">Host unit tests<a class="headerlink" href="#host-unit-tests" title="Permanent link">&para;</a></h2>
 <p>The tests build the real driver against a model of the AS5047U SPI slave
-(<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/mock_as5047u.hpp"><code>tests/mock_as5047u.hpp</code></a>): the frame length selects the format, the reply to a
+(<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/mock_as5047u.hpp"><code>tests/mock_as5047u.hpp</code></a>): the frame length selects the format, the reply to a
 command arrives during the next frame, write data frames return the old and then the new content, wrong CRCs set
-ERRFL, and ERRFL clears when read. Every MOSI frame is logged, so tests check the exact bytes on the bus.</p>
+ERRFL, and ERRFL clears when read. Every MOSI frame is logged, so tests check the exact bytes on the bus, and the
+model can fail a transfer, corrupt a reply on MISO or set the reply's warning and error bits on demand, to check
+that bus and reply errors reach the caller.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build-host<span class="w"> </span>-DHF_AS5047U_BUILD_TESTS<span class="o">=</span>ON
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cmake<span class="w"> </span>--build<span class="w"> </span>build-host
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>ctest<span class="w"> </span>--test-dir<span class="w"> </span>build-host<span class="w"> </span>--output-on-failure
 </span></code></pre></div>
+<p>CTest also runs <code>hf_as5047u_install_consumer</code>: it installs the build tree into <code>build-host/install-test</code> and builds
+a <code>find_package(hf_as5047u)</code> consumer (<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/install_consumer/main.cpp"><code>tests/install_consumer/</code></a>) that
+includes every public header and instantiates the driver, so a header missing from the install or a wrong
+exported target name fails the tests.</p>
 <table>
 <thead>
 <tr>
@@ -1337,25 +1343,29 @@ ERRFL, and ERRFL clears when read. Every MOSI frame is logged, so tests check th
 </thead>
 <tbody>
 <tr>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/test_frames.cpp"><code>tests/test_frames.cpp</code></a></td>
-<td>CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit</td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/test_frames.cpp"><code>tests/test_frames.cpp</code></a></td>
+<td>CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit; reply CRC checks and the reply warning and error bits</td>
 </tr>
 <tr>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/test_driver.cpp"><code>tests/test_driver.cpp</code></a></td>
-<td>Velocity sign and scale, zero position split, ABIRES codes, outputs, direction, filter presets, write verification, sticky flags, angle output source</td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/test_driver.cpp"><code>tests/test_driver.cpp</code></a></td>
+<td>Velocity sign and scale, zero position split, ABIRES codes, outputs, direction, filter presets, write verification, sticky flags, angle output source, bus-error propagation, <code>void</code> legacy ports</td>
 </tr>
 <tr>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/mock_as5047u.hpp"><code>tests/mock_as5047u.hpp</code></a></td>
-<td>The chip model</td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/test_otp.cpp"><code>tests/test_otp.cpp</code></a></td>
+<td><code>ProgramOTP()</code> against the datasheet procedure: the register writes of Figure 60, step 15, the guard-band test, failures before and after the burn, the poll timeout, the power-on check</td>
 </tr>
 <tr>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/test_harness.hpp"><code>tests/test_harness.hpp</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/mock_as5047u.hpp"><code>tests/mock_as5047u.hpp</code></a></td>
+<td>The chip model, including the OTP (burn, refresh, guard band, power-on cycle)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/test_harness.hpp"><code>tests/test_harness.hpp</code></a></td>
 <td>A dependency-free test registry and <code>CHECK</code> macros</td>
 </tr>
 </tbody>
 </table>
 <h2 id="documentation-snippets">Documentation snippets<a class="headerlink" href="#documentation-snippets" title="Permanent link">&para;</a></h2>
-<p>Every C++ block on this site is included from <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/docs/my_spi.hpp"><code>tests/docs/</code></a>, which the host build
+<p>Every C++ block on this site is included from <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/docs/my_spi.hpp"><code>tests/docs/</code></a>, which the host build
 compiles (target <code>hf_as5047u_doc_snippets</code>) with the driver explicitly instantiated over the documented port, so
 every member of <code>AS5047U&lt;&gt;</code> is compiled. A change to the API that breaks a page breaks the build first.</p>
 <h2 id="ci-workflows">CI workflows<a class="headerlink" href="#ci-workflows" title="Permanent link">&para;</a></h2>

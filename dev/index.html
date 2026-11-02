@@ -1304,7 +1304,7 @@ unit conversion.</p>
 <dt>Package and memory</dt>
 <dd>TSSOP-14; settings and zero position in volatile registers, burnable once to OTP</dd>
 </dl>
-<p><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/docs/datasheet/AS5047U_DS000637_1-01.pdf">Datasheet</a></p>
+<p><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/docs/datasheet/AS5047U_DS000637_1-01.pdf">Datasheet</a></p>
 </div>
 <h2 id="what-you-get">What you get<a class="headerlink" href="#what-you-get" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1312,7 +1312,8 @@ unit conversion.</p>
   uncompensated angle, velocity in LSB, °/s, rad/s or rpm, AGC and magnitude. See <a href="api-guide/">API guide</a>.</li>
 <li><strong>All three frame formats.</strong> 16-bit frames for the fastest reads, 24-bit frames with CRC, 32-bit frames with a
   PAD byte for daisy chains. Writes always use a CRC frame. See <a href="protocol/">SPI protocol</a>.</li>
-<li><strong>Checked writes.</strong> Every register write is read back on the next frame and retried on request. See
+<li><strong>Checked writes and replies.</strong> Every register write is read back on the next frame, every 24- and 32-bit reply
+  the driver uses is CRC-checked, and port bus errors fail the call; all are retried on request. See
   <a href="api-guide/#handle-errors">API guide</a>.</li>
 <li><strong>The outputs configured in one call.</strong> ABI resolution, index width, UVW pole pairs, PWM pin, hysteresis,
   direction, zero position, DAEC and the adaptive filter. See <a href="configuration/">Configuration</a>.</li>

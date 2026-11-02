@@ -1430,7 +1430,7 @@
 <p>How to do the common jobs with the driver: create it, read angle and velocity, check the field, configure,
 set up the outputs, use any register and handle errors.</p>
 <p>Every snippet on this page is compiled by the host CI from
-<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/docs/api_tasks.cpp"><code>tests/docs/api_tasks.cpp</code></a>, with <code>Encoder</code> standing for
+<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/docs/api_tasks.cpp"><code>tests/docs/api_tasks.cpp</code></a>, with <code>Encoder</code> standing for
 <code>as5047u::AS5047U&lt;MySpi&gt;</code>. The <a href="../api-reference/">API reference</a> lists every member.</p>
 <h2 id="the-shape-of-the-api">The shape of the API<a class="headerlink" href="#the-shape-of-the-api" title="Permanent link">&para;</a></h2>
 <p>One <code>AS5047U&lt;SpiType&gt;</code> object per sensor. It offers three levels of access:</p>
@@ -1478,7 +1478,7 @@ set up the outputs, use any register and handle errors.</p>
 </tr>
 <tr>
 <td>Field and status</td>
-<td><code>GetAGC()</code>, <code>GetMagnitude()</code>, <code>GetDiagnostics()</code>, <code>GetErrorFlags()</code>, <code>GetStickyErrorFlags()</code>, <code>DumpStatus()</code></td>
+<td><code>GetAGC()</code>, <code>GetMagnitude()</code>, <code>GetDiagnostics()</code>, <code>GetErrorFlags()</code>, <code>GetStickyErrorFlags()</code>, <code>ClearStickyErrorFlags()</code>, <code>DumpStatus()</code></td>
 </tr>
 <tr>
 <td>Angle settings</td>
@@ -1494,7 +1494,7 @@ set up the outputs, use any register and handle errors.</p>
 </tr>
 <tr>
 <td>Chip</td>
-<td><code>Set150CTemperatureMode()</code>, <code>ProgramOTP()</code></td>
+<td><code>Set150CTemperatureMode()</code>, <code>ProgramOTP()</code>, <code>VerifyOTP()</code></td>
 </tr>
 <tr>
 <td>Bus</td>
@@ -1502,8 +1502,10 @@ set up the outputs, use any register and handle errors.</p>
 </tr>
 </tbody>
 </table>
-<p>Setters return <code>bool</code>: <code>false</code> means the value did not read back as written. Measurements return the value; their
-errors are reported through the error flags (below). Nothing throws and nothing allocates.</p>
+<p>Setters return <code>bool</code>: <code>false</code> means the value did not read back as written, or a frame failed on the bus (the
+port's <code>transfer()</code> returned <code>false</code>). Measurements return the value (0 when the read failed); their errors are
+reported through the error flags (below). <code>ReadReg(reg)</code> reads any register and returns whether the read worked.
+Nothing throws and nothing allocates.</p>
 <p>Every call that takes a <code>retries</code> argument (default <code>AS5047U_CFG::CRC_RETRIES</code>, 0) repeats the access that many
 times when the chip reports a CRC or framing error.</p>
 <h2 id="create-the-driver">Create the driver<a class="headerlink" href="#create-the-driver" title="Permanent link">&para;</a></h2>
@@ -1648,36 +1650,37 @@ a total error of ±5 %.</p>
 ERRFL); <code>WriteReg(reg, retries)</code> writes <code>value</code> and checks the read-back. The datasheet's register tables are in
 its "Volatile Registers" and "Non-Volatile Registers (OTP)" sections.</p>
 <h2 id="handle-errors">Handle errors<a class="headerlink" href="#handle-errors" title="Permanent link">&para;</a></h2>
-<p>The chip reports errors in ERRFL (0x0001), which clears when it is read. Every <code>readRegister()</code> inside the driver
-reads ERRFL after the register and ORs its bits into a set of <strong>sticky flags</strong>; <code>GetStickyErrorFlags()</code> returns
-them and clears them.</p>
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">angle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">encoder</span><span class="p">.</span><span class="n">ReadReg</span><span class="o">&lt;</span><span class="n">AS5047U_REG</span><span class="o">::</span><span class="n">ANGLECOM</span><span class="o">&gt;</span><span class="p">();</span><span class="w">  </span><span class="c1">// then ERRFL</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">encoder</span><span class="p">.</span><span class="n">GetStickyErrorFlags</span><span class="p">());</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">flags</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0U</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">AS5047U_Error</span><span class="o">::</span><span class="n">CrcError</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">printf</span><span class="p">(</span><span class="s">"CRC error: check wiring, SPI mode 1, clock</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">AS5047U_Error</span><span class="o">::</span><span class="n">AgcWarning</span><span class="p">)</span><span class="w"> </span><span class="o">|</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">               </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">AS5047U_Error</span><span class="o">::</span><span class="n">MagHalf</span><span class="p">)))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">printf</span><span class="p">(</span><span class="s">"magnet out of range</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w">  </span><span class="c1">// do not use this sample</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="p">}</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="n">std</span><span class="o">::</span><span class="n">printf</span><span class="p">(</span><span class="s">"angle %u</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span><span class="o">&gt;</span><span class="p">(</span><span class="n">angle</span><span class="p">.</span><span class="n">bits</span><span class="p">.</span><span class="n">ANGLECOM_value</span><span class="p">));</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<p>The chip reports errors in ERRFL (0x0001), which clears when it is read (datasheet Figure 33). Every register
+read inside the driver reads ERRFL after the register and ORs its bits into a set of <strong>sticky flags</strong>; so does
+<code>GetErrorFlags()</code> and <code>ReadReg&lt;AS5047U_REG::ERRFL&gt;()</code>, so no ERRFL value the driver reads is lost.
+<code>GetStickyErrorFlags()</code> returns the flags and leaves them set; <code>ClearStickyErrorFlags()</code> clears them and returns
+what it cleared, in one atomic step.</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">encoder</span><span class="p">.</span><span class="n">ClearStickyErrorFlags</span><span class="p">();</span><span class="w">      </span><span class="c1">// start a clean window</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">const</span><span class="w"> </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">angle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">encoder</span><span class="p">.</span><span class="n">GetAngle</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span><span class="w"> </span><span class="c1">// then ERRFL; 2 retries on CRC</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">encoder</span><span class="p">.</span><span class="n">GetStickyErrorFlags</span><span class="p">());</span><span class="w"> </span><span class="c1">// kept until cleared</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">flags</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0U</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">AS5047U_Error</span><span class="o">::</span><span class="n">CrcError</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">printf</span><span class="p">(</span><span class="s">"CRC error: check wiring, SPI mode 1, clock</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">AS5047U_Error</span><span class="o">::</span><span class="n">AgcWarning</span><span class="p">)</span><span class="w"> </span><span class="o">|</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">               </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">uint16_t</span><span class="o">&gt;</span><span class="p">(</span><span class="n">AS5047U_Error</span><span class="o">::</span><span class="n">MagHalf</span><span class="p">)))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">printf</span><span class="p">(</span><span class="s">"magnet out of range</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w">  </span><span class="c1">// do not use this sample</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="p">}</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="n">std</span><span class="o">::</span><span class="n">printf</span><span class="p">(</span><span class="s">"angle %u</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span><span class="o">&gt;</span><span class="p">(</span><span class="n">angle</span><span class="p">));</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
 </span></code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">The measurement getters consume the sticky flags</p>
-<p><code>GetAngle()</code>, <code>GetVelocity()</code>, <code>GetAGC()</code>, <code>GetMagnitude()</code> and the other retrying getters call
-<code>GetStickyErrorFlags()</code> themselves to decide whether to retry, so the flags of that read are gone when the call
-returns. To act on the flags of a sample, read it with <code>ReadReg&lt;&gt;()</code> as above. <code>GetErrorFlags()</code> reads ERRFL
-from the chip, which only shows what happened since the driver's last read of it.</p>
-</div>
+<p>The getters decide on a retry from the ERRFL of their own read, so they never consume the sticky flags: the flags
+of every sample stay visible until you clear them. <code>GetErrorFlags()</code> returns the chip's ERRFL, which only shows
+what happened since the driver's previous read of it; the sticky flags hold everything since your last clear.</p>
+<p>Bits 0 to 10 are the ERRFL bits. Bits 11 and 12 are errors the driver detects itself; bits 13 and 14 are the warning
+and error bits of the chip's replies (bit 15, 14 of a 16-bit frame; datasheet Figures 22, 25 and 28).</p>
 <table>
 <thead>
 <tr>
 <th>Flag (<code>AS5047U_Error</code>)</th>
-<th>ERRFL bit</th>
+<th>Bit</th>
 <th>Meaning</th>
 <th>What to do</th>
 </tr>
@@ -1742,6 +1745,30 @@ from the chip, which only shows what happened since the driver's last read of it
 <td>10</td>
 <td>CORDIC overflow</td>
 <td>The angle is not valid; check the field</td>
+</tr>
+<tr>
+<td><code>BusError</code></td>
+<td>(driver) 11</td>
+<td>The port's <code>transfer()</code> returned <code>false</code></td>
+<td>Check the SPI driver and the bus; see <a href="../porting/#bus-errors">Porting</a></td>
+</tr>
+<tr>
+<td><code>ReplyCrcError</code></td>
+<td>(driver) 12</td>
+<td>The CRC of a 24- or 32-bit reply was wrong: MISO was corrupted</td>
+<td>Same as <code>CrcError</code>; the read was rejected</td>
+</tr>
+<tr>
+<td><code>ReplyWarning</code></td>
+<td>(reply) 13</td>
+<td>Warning bit set in a reply</td>
+<td>Look at ERRFL bits 0 to 2 in the same flags</td>
+</tr>
+<tr>
+<td><code>ReplyError</code></td>
+<td>(reply) 14</td>
+<td>Error bit set in a reply</td>
+<td>Look at the ERRFL error bits in the same flags</td>
 </tr>
 </tbody>
 </table>

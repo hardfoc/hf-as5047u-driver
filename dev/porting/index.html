@@ -964,6 +964,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bus-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bus errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reference-implementation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1281,6 +1292,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bus-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bus errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reference-implementation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1341,7 +1363,7 @@
 <h1 id="porting">Porting<a class="headerlink" href="#porting" title="Permanent link">&para;</a></h1>
 <p>Run the driver on a new MCU by writing one class with one method: the SPI transfer.</p>
 <p>The driver never calls your SDK directly. It calls <code>transfer()</code> on a class you derive from
-<code>as5047u::SpiInterface&lt;Self&gt;</code> (in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a>). The base
+<code>as5047u::SpiInterface&lt;Self&gt;</code> (in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a>). The base
 class uses CRTP: the call is resolved at compile time, so there are no virtual functions, no vtable and nothing to
 allocate.</p>
 <figure class="hf-figure">
@@ -1351,8 +1373,8 @@ allocate.</p>
 
 <details class="hf-figure-desc">
 <summary>Figure description and sources</summary>
-<p>From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low. Below it is the hardware.</p>
-<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
+<p>From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low and returns false on a bus error. Below it is the hardware.</p>
+<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
 </details>
 <h2 id="what-you-implement">What you implement<a class="headerlink" href="#what-you-implement" title="Permanent link">&para;</a></h2>
 <table>
@@ -1364,8 +1386,8 @@ allocate.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>void transfer(const uint8_t* tx, uint8_t* rx, std::size_t len)</code></td>
-<td>Pull CSn low, clock out <code>len</code> bytes from <code>tx</code> while storing <code>len</code> bytes into <code>rx</code>, release CSn. <code>len</code> is 2, 3 or 4. The driver always passes both buffers</td>
+<td><code>bool transfer(const uint8_t* tx, uint8_t* rx, std::size_t len)</code></td>
+<td>Pull CSn low, clock out <code>len</code> bytes from <code>tx</code> while storing <code>len</code> bytes into <code>rx</code>, release CSn. Return <code>true</code> when the frame went out, <code>false</code> on a bus error. <code>len</code> is 2, 3 or 4. The driver always passes both buffers</td>
 </tr>
 </tbody>
 </table>
@@ -1375,12 +1397,14 @@ allocate.</p>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">public</span><span class="o">:</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="c1">// One frame of 2, 3 or 4 bytes, full duplex, CSn low for the whole frame.</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="c1">// SPI mode 1 (CPOL = 0, CPHA = 1), MSB first, up to 10 MHz.</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="n">transfer</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">rx</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="n">len</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="n">platform_cs_low</span><span class="p">();</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="n">platform_spi_exchange</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="n">rx</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="n">platform_cs_high</span><span class="p">();</span><span class="w">  </span><span class="c1">// the chip executes the frame here; &gt;= 350 ns high</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">};</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="c1">// Return false on a bus error: the driver call that sent the frame then fails.</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">transfer</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="kt">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">rx</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="kt">size_t</span><span class="w"> </span><span class="n">len</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="n">platform_cs_low</span><span class="p">();</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">platform_spi_exchange</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="n">rx</span><span class="p">,</span><span class="w"> </span><span class="n">len</span><span class="p">);</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="n">platform_cs_high</span><span class="p">();</span><span class="w"> </span><span class="c1">// the chip executes the frame here; &gt;= 350 ns high</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">ok</span><span class="p">;</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">};</span>
 </span></code></pre></div>
 <p>Rules the transfer must follow:</p>
 <ul>
@@ -1392,16 +1416,23 @@ allocate.</p>
   frames (<a href="../hardware/#timing">Hardware</a>).</li>
 <li><strong>Blocking.</strong> Return only when the frame is complete and <code>rx</code> is filled. The driver uses the reply of one call to
   build the next.</li>
-<li><strong>No error return.</strong> <code>transfer()</code> returns <code>void</code>; a bus failure you cannot hide should be logged by the port.
-  The chip's ERRFL then reports the framing or CRC error on the next read.</li>
 </ul>
+<h2 id="bus-errors">Bus errors<a class="headerlink" href="#bus-errors" title="Permanent link">&para;</a></h2>
+<p>Return <code>false</code> from <code>transfer()</code> when your SDK reports a failure. The driver stops the access that sent the frame:
+the setters, <code>WriteReg()</code> and <code>ProgramOTP()</code> return <code>false</code>, <code>ReadReg(reg)</code> returns <code>false</code>, and every failed
+frame sets <code>AS5047U_Error::BusError</code> in the sticky flags, which is how the measurement getters (they return a
+value, 0 for a failed read) report it. A read-modify-write setter whose read fails writes nothing. Calls with a
+<code>retries</code> argument repeat a failed access.</p>
+<p>Return a <code>bool</code>, not your SDK's status code: the driver rejects any other return type at compile time, so an
+<code>esp_err_t</code> (where 0 is success) cannot be read as <code>false</code>. A port written for the earlier contract, with a <code>void</code>
+<code>transfer()</code>, still compiles; the driver treats it as never failing.</p>
 <h2 id="reference-implementation">Reference implementation<a class="headerlink" href="#reference-implementation" title="Permanent link">&para;</a></h2>
-<p>The ESP32 examples use <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/examples/esp32/main/esp32_as5047u_bus.hpp"><code>esp32_as5047u_bus.hpp</code></a>: an ESP-IDF
+<p>The ESP32 examples use <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/examples/esp32/main/esp32_as5047u_bus.hpp"><code>esp32_as5047u_bus.hpp</code></a>: an ESP-IDF
 <code>spi_master</code> device in mode 1 with hardware chip select (<code>spics_io_num</code>), one <code>spi_device_transmit()</code> per frame,
 and optional logging of every frame. Start from it for any ESP-IDF target.</p>
 <h2 id="check-your-port">Check your port<a class="headerlink" href="#check-your-port" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Build it: the port on this page is compiled by the host CI from <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/tests/docs/my_spi.hpp"><code>tests/docs/</code></a>, with
+<li>Build it: the port on this page is compiled by the host CI from <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/tests/docs/my_spi.hpp"><code>tests/docs/</code></a>, with
    the driver instantiated over it (<code>template class as5047u::AS5047U&lt;MySpi&gt;;</code>).</li>
 <li>Read DIA with <code>GetDiagnostics()</code>: <code>LoopsFinished</code> = 1 and a plausible <code>VDD_mode</code> prove that reads work.</li>
 <li>Read ERRFL with <code>GetErrorFlags()</code> twice: the second read should be 0. A persistent <code>Framing_error</code> or

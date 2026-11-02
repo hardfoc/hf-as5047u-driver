@@ -1387,8 +1387,7 @@
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A C++20 compiler: GCC 10 or later, Clang 12 or later. The host CI builds with GCC and Clang on Ubuntu 24.04.</li>
-<li>No RTOS, heap or exceptions. The driver uses <code>printf</code> in <code>DumpStatus()</code> and when a write fails its read-back
-  check.</li>
+<li>No RTOS, heap or exceptions. The only output is <code>DumpStatus()</code>, which prints through <code>printf</code> when you call it.</li>
 </ul>
 <h2 id="get-the-source">Get the source<a class="headerlink" href="#get-the-source" title="Permanent link">&para;</a></h2>
 <p>A git submodule keeps the driver pinned to a version you chose:</p>
@@ -1403,6 +1402,12 @@
 </span></code></pre></div>
 <p><code>hf_as5047u</code> is an <code>INTERFACE</code> target: it carries the include directories (including the generated version
 header) and requires C++20 (<code>cxx_std_20</code>), so your target does not need to set either.</p>
+<p>An installed copy works the same way. <code>cmake --install</code> puts the headers, the template implementation
+<code>as5047u.ipp</code> and the generated <code>as5047u_version.h</code> in one include directory and exports the package
+<code>hf_as5047u</code>:</p>
+<div class="language-cmake highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">find_package</span><span class="p">(</span><span class="s">hf_as5047u</span><span class="w"> </span><span class="s">CONFIG</span><span class="w"> </span><span class="s">REQUIRED</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">hf::as5047u</span><span class="p">)</span>
+</span></code></pre></div>
 <table>
 <thead>
 <tr>
@@ -1425,7 +1430,7 @@ header) and requires C++20 (<code>cxx_std_20</code>), so your target does not ne
 </tbody>
 </table>
 <h2 id="esp-idf">ESP-IDF<a class="headerlink" href="#esp-idf" title="Permanent link">&para;</a></h2>
-<p>The ESP-IDF component wrapper is <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/</code></a>.
+<p>The ESP-IDF component wrapper is <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/</code></a>.
 Copy that folder into your project's <code>components/</code> (or point <code>EXTRA_COMPONENT_DIRS</code> at it) and set the
 <code>HF_AS5047U_ROOT</code> cache variable to the driver checkout; the wrapper stops with a clear message when the path is
 wrong. Your component then declares <code>REQUIRES hf_as5047u</code>. The wrapper itself requires <code>driver</code> and <code>freertos</code>.</p>
@@ -1441,25 +1446,25 @@ wrong. Your component then declares <code>REQUIRES hf_as5047u</code>. The wrappe
 <tbody>
 <tr>
 <td>Settings</td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/cmake/hf_as5047u_build_settings.cmake"><code>cmake/hf_as5047u_build_settings.cmake</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/cmake/hf_as5047u_build_settings.cmake"><code>cmake/hf_as5047u_build_settings.cmake</code></a></td>
 <td>Target name, include directories, version: the single source of truth</td>
 </tr>
 <tr>
 <td>Library</td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/CMakeLists.txt"><code>CMakeLists.txt</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/CMakeLists.txt"><code>CMakeLists.txt</code></a></td>
 <td>Interface library, install and package export</td>
 </tr>
 <tr>
 <td>ESP-IDF</td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/CMakeLists.txt</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/CMakeLists.txt</code></a></td>
 <td>IDF component wrapper over the same settings</td>
 </tr>
 </tbody>
 </table>
 <p>The version is set once in the settings file and written into <code>as5047u_version.h</code> at configure time. A build
 that does not go through CMake must generate that header from
-<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/80da84acda238a11df7e7d3adb2685424dd25961/inc/as5047u_version.h.in"><code>inc/as5047u_version.h.in</code></a> itself. Read the version at run time:</p>
-<div class="language-cpp highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">as5047u</span><span class="o">::</span><span class="n">AS5047U</span><span class="o">&lt;</span><span class="n">MySpi</span><span class="o">&gt;::</span><span class="n">GetDriverVersion</span><span class="p">();</span><span class="w">   </span><span class="c1">// "1.0.0"</span>
+<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/b42f0dc3c83748aaf99dd369ac19afee6e74a3a9/inc/as5047u_version.h.in"><code>inc/as5047u_version.h.in</code></a> itself. Read the version at run time:</p>
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">as5047u</span><span class="o">::</span><span class="n">AS5047U</span><span class="o">&lt;</span><span class="n">MySpi</span><span class="o">&gt;::</span><span class="n">GetDriverVersion</span><span class="p">();</span><span class="w">   </span><span class="c1">// "1.0.0"</span>
 </span></code></pre></div>
 <h2 id="compile-time-switches">Compile-time switches<a class="headerlink" href="#compile-time-switches" title="Permanent link">&para;</a></h2>
 <table>
