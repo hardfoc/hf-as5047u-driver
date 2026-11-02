@@ -6,10 +6,10 @@
 #ifndef AS5047U_IMPL
 #define AS5047U_IMPL
 
-#ifdef AS5047U_HEADER_INCLUDED
-#include "../inc/as5047u.hpp"
-#else
-#include "../inc/as5047u.hpp"
+// Normally included at the end of as5047u.hpp. Found through the include path (src/ in the source
+// tree, the include directory once installed), never by a path relative to the header.
+#ifndef AS5047U_HEADER_INCLUDED
+#include "as5047u.hpp"
 #endif
 
 #include <iomanip> // for std::hex and formatting

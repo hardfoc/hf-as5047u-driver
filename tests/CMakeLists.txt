@@ -36,3 +36,10 @@ target_link_libraries(hf_as5047u_doc_snippets PRIVATE ${HF_AS5047U_TARGET_NAME})
 target_include_directories(hf_as5047u_doc_snippets PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/docs)
 target_compile_features(hf_as5047u_doc_snippets PRIVATE cxx_std_20)
 target_compile_options(hf_as5047u_doc_snippets PRIVATE -Wall -Wextra)
+
+# `cmake --install` must ship every header the public headers include (as5047u.ipp, the generated
+# as5047u_version.h) and export the documented target hf::as5047u. Installs into the build tree and builds a
+# consumer with find_package().
+add_test(NAME hf_as5047u_install_consumer
+  COMMAND ${CMAKE_COMMAND} -DBIN=${PROJECT_BINARY_DIR} -DSRC=${PROJECT_SOURCE_DIR}
+          -DCXX=${CMAKE_CXX_COMPILER} -P ${CMAKE_CURRENT_SOURCE_DIR}/install_consumer.cmake)

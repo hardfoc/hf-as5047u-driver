@@ -31,6 +31,11 @@ All notable changes to this driver are listed here. The format follows
 
 ### Fixed
 
+- `cmake --install` now installs `as5047u.ipp`, which `as5047u.hpp` includes, so an installed copy compiles; the
+  header includes it through the include path (`src/` is a build include directory) instead of `../src/`. The
+  installed target is exported as `hf::as5047u`, the name the package config and the docs give (it was
+  `hf::hf_as5047u`, which stays available as an alias). New ctest `hf_as5047u_install_consumer` builds a
+  `find_package()` consumer against a fresh install.
 - The write path no longer prints: a failed write verification used to `printf` a line from inside the driver.
   The cause is in the sticky flags, which the write path already fills from ERRFL. `DumpStatus()`, which exists to
   print, is unchanged.

@@ -18,6 +18,11 @@ cmake --build build-host
 ctest --test-dir build-host --output-on-failure
 ```
 
+CTest also runs `hf_as5047u_install_consumer`: it installs the build tree into `build-host/install-test` and builds
+a `find_package(hf_as5047u)` consumer ([`tests/install_consumer/`](../tests/install_consumer/main.cpp)) that
+includes every public header and instantiates the driver, so a header missing from the install or a wrong
+exported target name fails the tests.
+
 | File | Covers |
 | --- | --- |
 | [`tests/test_frames.cpp`](../tests/test_frames.cpp) | CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit; reply CRC checks and the reply warning and error bits |

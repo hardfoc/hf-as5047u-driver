@@ -29,6 +29,15 @@ target_link_libraries(my_app PRIVATE hf_as5047u)   # or the alias hf::as5047u
 `hf_as5047u` is an `INTERFACE` target: it carries the include directories (including the generated version
 header) and requires C++20 (`cxx_std_20`), so your target does not need to set either.
 
+An installed copy works the same way. `cmake --install` puts the headers, the template implementation
+`as5047u.ipp` and the generated `as5047u_version.h` in one include directory and exports the package
+`hf_as5047u`:
+
+```cmake
+find_package(hf_as5047u CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE hf::as5047u)
+```
+
 | Option | Default | Effect |
 | --- | --- | --- |
 | `HF_AS5047U_ENABLE_WARNINGS` | `OFF` | `-Wall -Wextra -Wpedantic` for targets that link the driver |

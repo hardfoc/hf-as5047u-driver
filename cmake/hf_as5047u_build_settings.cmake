@@ -45,11 +45,13 @@ endif()
 #===============================================================================
 # Public include directories
 #===============================================================================
-# Two include directories:
+# Three include directories (an installed copy has all three files in one include directory):
 #   1. Source tree inc/ — hand-written headers (as5047u.hpp, etc.)
-#   2. Build tree generated dir — configure_file outputs (as5047u_version.h)
+#   2. Source tree src/ — template implementation (as5047u.ipp, included by as5047u.hpp)
+#   3. Build tree generated dir — configure_file outputs (as5047u_version.h)
 set(HF_AS5047U_PUBLIC_INCLUDE_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../inc"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     "${HF_AS5047U_VERSION_HEADER_DIR}"
 )
 

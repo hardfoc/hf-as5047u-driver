@@ -657,5 +657,5 @@ inline const char* GetDriverVersion() noexcept {
 // Include template implementation
 #define AS5047U_HEADER_INCLUDED
 // NOLINTNEXTLINE(bugprone-suspicious-include) - Intentional: template implementation file
-#include "../src/as5047u.ipp"
+#include "as5047u.ipp"
 #undef AS5047U_HEADER_INCLUDED
