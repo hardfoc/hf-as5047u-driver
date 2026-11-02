@@ -1,6 +1,6 @@
 /**
  * @file ports.cpp
- * @brief Instantiates the driver over the documented port, so every member compiles in full.
+ * @brief Instantiates the driver over the documented port: every member compiles.
  */
 #include "my_spi.hpp"
 

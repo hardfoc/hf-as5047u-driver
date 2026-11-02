@@ -10,15 +10,15 @@
 #include <cstdio>
 
 int print_angle(MySpi& spi) {
-  as5047u::AS5047U<MySpi> encoder(spi, FrameFormat::SPI_24);  // 24-bit frames: CRC on every frame
+  as5047u::AS5047U<MySpi> encoder(spi, FrameFormat::SPI_24);  // CRC on every frame
 
-  const auto dia = encoder.GetDiagnostics();                  // 1. is the chip up, the magnet in range?
+  const auto dia = encoder.GetDiagnostics();         // 1. chip up, magnet in range?
   if (dia.bits.LoopsFinished == 0U || dia.bits.MagHalf_flag != 0U) {
-    return -1;                                                // no supply, no SPI, or no magnet
+    return -1;                                       // no supply, no SPI or no magnet
   }
 
-  const float degrees = encoder.GetAngleDegrees(2);           // 2. angle, up to 2 retries on CRC errors
-  const float rpm = encoder.GetVelocityRPM();                 // 3. velocity
+  const float degrees = encoder.GetAngleDegrees(2);  // 2. angle, 2 retries on CRC
+  const float rpm = encoder.GetVelocityRPM();        // 3. velocity
   std::printf("%.2f deg  %.1f rpm  AGC %u\n", degrees, rpm, encoder.GetAGC());
   return 0;
 }
