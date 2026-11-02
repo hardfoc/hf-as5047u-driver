@@ -211,7 +211,7 @@ bool AS5047U<SpiType>::SetZeroPosition(uint16_t angle_lsb, uint8_t retries) {
   m.bits.ZPOSM_bits = (angle_lsb >> 6) & 0xFF;
   AS5047U_REG::ZPOSL l{};
   l.bits.ZPOSL_bits = angle_lsb & 0x3F;
-  return this->template WriteReg(m, retries) && this->template WriteReg(l, retries);
+  return this->WriteReg(m, retries) && this->WriteReg(l, retries);
 }
 
 template <typename SpiType>
@@ -221,7 +221,7 @@ bool AS5047U<SpiType>::SetABIResolution(uint8_t resolution_bits, uint8_t retries
   static constexpr uint8_t kBitsToAbires[] = {2, 1, 0, 3, 4};  // index (bits-10) -> ABIRES code
   auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
   s3.bits.ABIRES = kBitsToAbires[resolution_bits - 10];
-  return this->template WriteReg(s3, retries);
+  return this->WriteReg(s3, retries);
 }
 
 template <typename SpiType>
@@ -229,14 +229,14 @@ bool AS5047U<SpiType>::SetUVWPolePairs(uint8_t pairs, uint8_t retries) {
   pairs = std::clamp(pairs, uint8_t(1), uint8_t(7));
   auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
   s3.bits.UVWPP = static_cast<uint8_t>(pairs - 1);
-  return this->template WriteReg(s3, retries);
+  return this->WriteReg(s3, retries);
 }
 
 template <typename SpiType>
 bool AS5047U<SpiType>::SetIndexPulseLength(uint8_t lsb_len, uint8_t retries) {
   auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
   s2.bits.IWIDTH = (lsb_len == 1) ? 1 : 0;
-  return this->template WriteReg(s2, retries);
+  return this->WriteReg(s2, retries);
 }
 
 // Truth table for configureInterface():
@@ -266,21 +266,21 @@ bool AS5047U<SpiType>::ConfigureInterface(bool abi, bool uvw, bool pwm, uint8_t 
     s2.bits.UVW_ABI = 0;
     s2.bits.PWMon = pwm;
   }
-  return this->template WriteReg(dis, retries) && this->template WriteReg(s2, retries);
+  return this->WriteReg(dis, retries) && this->WriteReg(s2, retries);
 }
 
 template <typename SpiType>
 bool AS5047U<SpiType>::SetDynamicAngleCompensation(bool enable, uint8_t retries) {
   auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
   s2.bits.DAECDIS = enable ? 0 : 1;
-  return this->template WriteReg(s2, retries);
+  return this->WriteReg(s2, retries);
 }
 
 template <typename SpiType>
 bool AS5047U<SpiType>::SetAdaptiveFilter(bool enable, uint8_t retries) {
   auto dis = this->template ReadReg<AS5047U_REG::DISABLE>();
   dis.bits.FILTER_disable = enable ? 0 : 1;
-  return this->template WriteReg(dis, retries);
+  return this->WriteReg(dis, retries);
 }
 
 template <typename SpiType>
@@ -290,7 +290,7 @@ bool AS5047U<SpiType>::SetFilterParameters(uint8_t k_min, uint8_t k_max, uint8_t
   auto s1 = this->template ReadReg<AS5047U_REG::SETTINGS1>();
   s1.bits.K_min = k_min;
   s1.bits.K_max = k_max;
-  return this->template WriteReg(s1, retries);
+  return this->WriteReg(s1, retries);
 }
 
 template <typename SpiType>
@@ -344,14 +344,14 @@ std::pair<uint8_t, uint8_t> AS5047U<SpiType>::GetFilterParameters(uint8_t retrie
     }
     s1 = this->template ReadReg<AS5047U_REG::SETTINGS1>();
   }
-  return {s1.bits.K_min, s1.bits.K_max};
+  return {static_cast<uint8_t>(s1.bits.K_min), static_cast<uint8_t>(s1.bits.K_max)};
 }
 
 template <typename SpiType>
 bool AS5047U<SpiType>::Set150CTemperatureMode(bool enable, uint8_t retries) {
   auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
   s2.bits.NOISESET = enable ? 1 : 0;
-  return this->template WriteReg(s2, retries);
+  return this->WriteReg(s2, retries);
 }
 
 template <typename SpiType>
@@ -374,10 +374,10 @@ bool AS5047U<SpiType>::ProgramOTP() {
   // Enable ECC and compute needed checksum
   auto ecc = this->template ReadReg<AS5047U_REG::ECC>();
   ecc.bits.ECC_en = 1;
-  this->template WriteReg(ecc);
+  this->WriteReg(ecc);
   auto key = this->template ReadReg<AS5047U_REG::ECC_Checksum>().bits.ECC_s;
   ecc.bits.ECC_chsum = key;
-  this->template WriteReg(ecc);
+  this->WriteReg(ecc);
 
   // Verify shadow registers are still correct
   for (uint16_t a = 0x0016; a <= 0x001A; ++a) {
@@ -390,9 +390,9 @@ bool AS5047U<SpiType>::ProgramOTP() {
   // Begin OTP programming sequence
   AS5047U_REG::PROG p{};
   p.bits.PROGEN = 1;
-  this->template WriteReg(p);
+  this->WriteReg(p);
   p.bits.PROGOTP = 1;
-  this->template WriteReg(p);
+  this->WriteReg(p);
 
   // Wait for programming to complete (timeout after ~15000 cycles)
   for (uint16_t i = 0; i < 15000; ++i) {
@@ -401,13 +401,13 @@ bool AS5047U<SpiType>::ProgramOTP() {
 
       // Guard-band verification: enable PROGVER and refresh OTPREF
       p.bits.PROGVER = 1;
-      this->template WriteReg(p);
+      this->WriteReg(p);
 
       // Toggle OTPREF to reload from OTP
       p.bits.OTPREF = 1;
-      this->template WriteReg(p);
+      this->WriteReg(p);
       p.bits.OTPREF = 0;
-      this->template WriteReg(p);
+      this->WriteReg(p);
 
       // Verify shadow registers match OTP
       for (uint16_t a = 0x0016; a <= 0x001A; ++a) {
@@ -467,7 +467,7 @@ bool AS5047U<SpiType>::SetHysteresis(AS5047U_REG::SETTINGS3::Hysteresis hysteres
                                      uint8_t retries) {
   auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
   s3.bits.HYS = static_cast<uint8_t>(hysteresis);
-  return this->template WriteReg(s3, retries);
+  return this->WriteReg(s3, retries);
 }
 
 template <typename SpiType>
@@ -481,7 +481,7 @@ bool AS5047U<SpiType>::SetAngleOutputSource(AS5047U_REG::SETTINGS2::AngleOutputS
                                             uint8_t retries) {
   auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
   s2.bits.Data_select = static_cast<uint8_t>(source);
-  return this->template WriteReg(s2, retries);
+  return this->WriteReg(s2, retries);
 }
 
 template <typename SpiType>
@@ -602,8 +602,6 @@ uint16_t AS5047U<SpiType>::readRegister(uint16_t address) const {
 template <typename SpiType>
 bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t retries) const {
   bool success = false;
-  uint16_t err_mask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                      static_cast<uint16_t>(AS5047U_Error::FramingError);
 
   // The AS5047U datasheet specifies 16-bit frames for read operations only.
   // Writes require 24-bit or 32-bit frames (which include CRC). If the current
