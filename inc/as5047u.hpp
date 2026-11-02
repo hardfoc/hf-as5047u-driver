@@ -4,16 +4,15 @@
  * @copyright Copyright (c) 2024-2025 HardFOC. All rights reserved.
  */
 #pragma once
-#include "as5047u_spi_interface.hpp"
 #include "as5047u_registers.hpp"
+#include "as5047u_spi_interface.hpp"
 #include "as5047u_version.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <bitset>
-#include <cmath> // for M_PI and math functions
 #include <cstdint>
-#include <cstdio>     // for printf
+#include <cstdio>     // for printf in DumpStatus()
 #include <functional> // for std::function
 #include <utility>    // for std::pair
 
@@ -73,6 +72,11 @@ struct OtpResult {
   /// was burned. Compare after the power-on cycle with VerifyOTP().
   std::array<uint16_t, kOtpRegisterCount> written{};
 };
+
+/// Pi as a float constant. M_PI is not standard C++ (absent with MSVC unless _USE_MATH_DEFINES,
+/// and with strict-ANSI newlib builds); C++20's std::numbers::pi_v<float> is not on every
+/// toolchain.
+inline constexpr float kPi = 3.14159265358979323846F;
 
 /** @brief Units for angle-returning APIs. */
 enum class AngleUnit : uint8_t {
@@ -199,21 +203,21 @@ public:
   /** @brief Angle conversion helpers. */
   struct Angle {
     static constexpr float DEG_PER_LSB = 360.0F / 16384.0F;
-    static constexpr float RAD_PER_LSB = (2.0F * static_cast<float>(M_PI)) / 16384.0F;
+    static constexpr float RAD_PER_LSB = (2.0F * kPi) / 16384.0F;
 
     static constexpr uint16_t DegreesToLsb(float degrees) noexcept {
       return static_cast<uint16_t>((degrees * 16384.0F) / 360.0F) & 0x3FFF;
     }
 
     static constexpr uint16_t RadiansToLsb(float radians) noexcept {
-      return static_cast<uint16_t>((radians * 16384.0F) / (2.0F * static_cast<float>(M_PI))) & 0x3FFF;
+      return static_cast<uint16_t>((radians * 16384.0F) / (2.0F * kPi)) & 0x3FFF;
     }
   };
 
   /** @brief Helper constants and methods for velocity unit conversions. */
   struct Velocity {
     static constexpr float DEG_PER_LSB = 24.141F;
-    static constexpr float RAD_PER_LSB = DEG_PER_LSB * M_PI / 180.0F;
+    static constexpr float RAD_PER_LSB = DEG_PER_LSB * kPi / 180.0F;
     static constexpr float RPM_PER_LSB = DEG_PER_LSB * (60.0F / 360.0F);
   };
 

@@ -678,20 +678,12 @@ bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t r
     if (sent && verify && read_back == expected) {
       return true;
     }
-    uint16_t errfl = 0; // why it failed (or, unverified, whether the chip took it); sticky flags
+    // Why it failed (or, unverified, whether the chip took it): ERRFL goes to the sticky flags,
+    // where the caller finds it. The driver itself prints nothing.
+    uint16_t errfl = 0;
     const bool errfl_ok = readRegister(AS5047U_REG::ERRFL::ADDRESS, errfl);
     if (!verify && sent && errfl_ok && (errfl & kCommandErrorMask) == 0U) {
       return true;
-    }
-    if (sent && verify) {
-      AS5047U_REG::ERRFL e{};
-      e.value = errfl;
-      printf("AS5047U write verify failed: addr=0x%04X expected=0x%04X read_back=0x%04X "
-             "ERRFL=0x%04X (CRC_error=%u Framing_error=%u Command_error=%u)\n",
-             static_cast<unsigned>(address), static_cast<unsigned>(expected),
-             static_cast<unsigned>(read_back), static_cast<unsigned>(e.value),
-             static_cast<unsigned>(e.bits.CRC_error), static_cast<unsigned>(e.bits.Framing_error),
-             static_cast<unsigned>(e.bits.Command_error));
     }
   }
   return false;

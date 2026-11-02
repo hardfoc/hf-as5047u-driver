@@ -5,8 +5,7 @@ Add the driver to a CMake or ESP-IDF project. It is a header-only C++20 library 
 ## Requirements
 
 - A C++20 compiler: GCC 10 or later, Clang 12 or later. The host CI builds with GCC and Clang on Ubuntu 24.04.
-- No RTOS, heap or exceptions. The driver uses `printf` in `DumpStatus()` and when a write fails its read-back
-  check.
+- No RTOS, heap or exceptions. The only output is `DumpStatus()`, which prints through `printf` when you call it.
 
 ## Get the source
 

@@ -31,6 +31,11 @@ All notable changes to this driver are listed here. The format follows
 
 ### Fixed
 
+- The write path no longer prints: a failed write verification used to `printf` a line from inside the driver.
+  The cause is in the sticky flags, which the write path already fills from ERRFL. `DumpStatus()`, which exists to
+  print, is unchanged.
+- The non-standard `M_PI` is replaced by the constant `as5047u::kPi`, so the header builds where `M_PI` is not
+  defined (MSVC without `_USE_MATH_DEFINES`, strict-ISO newlib); `<cmath>` is no longer included.
 - `ProgramOTP()` follows the datasheet's step-by-step OTP procedure exactly (DS000637 page 41-42, Figure 60): it now
   clears the volatile registers before the guard-band test (step 15, which was skipped, so the guard-band
   comparison could pass on values still in the volatile registers), writes the PROG values of Figure 60 (`0x01`,

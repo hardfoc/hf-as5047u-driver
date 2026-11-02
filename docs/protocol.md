@@ -91,8 +91,8 @@ sequenceDiagram
     Note over D: equal: return true. Different: read ERRFL, retry or return false
 ```
 
-On a mismatch the driver reads ERRFL, prints one line with the address, the expected and the read-back value and
-the CRC, framing and command error bits (through `printf`), and tries again up to `retries` times.
+On a mismatch the driver reads ERRFL, which goes into the sticky flags, and tries again up to `retries` times. It
+prints nothing: the reason for a failed write is in `GetStickyErrorFlags()`.
 
 ## What a call costs
 
