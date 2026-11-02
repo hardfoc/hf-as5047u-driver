@@ -11,8 +11,9 @@
  *   over bits 23:8; a wrong CRC sets ERRFL.CRC_error and the command is not executed.
  * - Reading ERRFL clears it.
  *
- * Every MOSI frame is logged so tests can check the exact bytes the driver sends, and a transfer
- * can be made to fail on demand (the port's bus-error return).
+ * Every MOSI frame is logged so tests can check the exact bytes the driver sends. On demand a
+ * transfer fails (the port's bus-error return), a reply is corrupted on MISO (a data bit flips after
+ * the CRC was computed) or the replies carry the warning / error bits.
  */
 #pragma once
 
@@ -48,6 +49,13 @@ public:
   std::size_t transfers = 0;        ///< transfer() calls so far
   std::size_t failed_transfers = 0; ///< transfers that reported a bus error
 
+  // --- MISO fault injection -------------------------------------------------
+  /// Index of one transfer whose MISO data bit 0 flips on the wire after the chip computed the CRC
+  /// (a bit error on MISO). Negative: none.
+  long corrupt_reply_at = -1;
+  /// ORed into every MISO word: bit 15 = warning, bit 14 = error (DS Figures 22, 25, 28).
+  uint16_t reply_flags = 0;
+
   /// CRTP contract: one full-duplex frame; false on a bus error.
   bool transfer(const uint8_t* tx, uint8_t* rx, std::size_t len) {
     const auto index = static_cast<long>(transfers++);
@@ -59,6 +67,9 @@ public:
       --transfers_before_failure;
     }
     frame(tx, rx, len);
+    if (index == corrupt_reply_at) {
+      rx[1] ^= 0x01U;
+    }
     return true;
   }
 
@@ -76,7 +87,7 @@ private:
     mosi.emplace_back(tx, tx + len);
 
     // MISO: the word prepared at the end of the previous frame.
-    const uint16_t out = pending_;
+    const auto out = static_cast<uint16_t>(pending_ | reply_flags);
     if (len == 2) {
       rx[0] = static_cast<uint8_t>(out >> 8);
       rx[1] = static_cast<uint8_t>(out & 0xFF);

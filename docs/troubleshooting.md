@@ -17,7 +17,8 @@ registers in one go, and tells transport problems (all zeros, all ones) apart fr
 
 ## CRC or framing errors
 
-`CrcError` or `FramingError` in the sticky flags or in `GetErrorFlags()`.
+`CrcError` or `FramingError` in the sticky flags or in `GetErrorFlags()` (the chip saw a bad MOSI frame), or
+`ReplyCrcError` in the sticky flags (the driver saw a bad MISO frame).
 
 | Cause | Fix |
 | --- | --- |

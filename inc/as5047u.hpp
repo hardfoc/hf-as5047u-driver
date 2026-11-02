@@ -31,7 +31,10 @@ enum class AS5047U_Error : uint16_t {
   WatchdogError = 1 << 7,   ///< Internal oscillator or watchdog not working proper
   OffCompError = 1 << 9,    ///< Internal offset compensation not finished
   CordicOverflow = 1 << 10, ///< CORDIC algorithm overflow
-  BusError = 1 << 11        ///< Driver: the port's transfer() reported a bus error
+  BusError = 1 << 11,       ///< Driver: the port's transfer() reported a bus error
+  ReplyCrcError = 1 << 12,  ///< Driver: the CRC of a 24/32-bit MISO frame was wrong
+  ReplyWarning = 1 << 13,   ///< Chip: warning bit set in a MISO frame (DS Figures 22, 25, 28)
+  ReplyError = 1 << 14      ///< Chip: error bit set in a MISO frame (DS Figures 22, 25, 28)
 };
 
 // -----------------------------------------------------------------------------
@@ -520,9 +523,14 @@ private:
   //------------------------------------------------------------------
   // Low level register access helpers
   static constexpr uint16_t kReadBit = 0x4000; ///< RW / R bit of a command frame: 1 = read
+  static constexpr uint16_t kReplyWarningBit = 0x8000; ///< MISO warning bit (DS Figure 22, 25, 28)
+  static constexpr uint16_t kReplyErrorBit = 0x4000;   ///< MISO error bit (DS Figure 22, 25, 28)
 
-  /// One SPI frame in @p format; @p reply is the 16-bit reply word. False on a bus error.
-  bool transferFrame(FrameFormat format, uint16_t word, uint16_t& reply) const;
+  /// One SPI frame in @p format; @p reply is the 16-bit reply word. False on a bus error, or, with
+  /// @p inspect (the reply carries data the caller uses), when the reply's CRC is wrong. The
+  /// warning and error bits of every reply with a valid CRC go to the sticky flags.
+  bool transferFrame(FrameFormat format, uint16_t word, uint16_t& reply,
+                     bool inspect = false) const;
   /// Read a register (command frame, then a NOP for the reply) without reading ERRFL.
   bool rawReadRegister(uint16_t addr, uint16_t& value) const;
   /// Read a register, then ERRFL (accumulated into the sticky flags). False on a bus error or when

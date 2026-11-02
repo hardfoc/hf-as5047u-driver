@@ -120,7 +120,10 @@ The getters decide on a retry from the ERRFL of their own read, so they never co
 of every sample stay visible until you clear them. `GetErrorFlags()` returns the chip's ERRFL, which only shows
 what happened since the driver's previous read of it; the sticky flags hold everything since your last clear.
 
-| Flag (`AS5047U_Error`) | ERRFL bit | Meaning | What to do |
+Bits 0 to 10 are the ERRFL bits. Bits 11 and 12 are errors the driver detects itself; bits 13 and 14 are the warning
+and error bits of the chip's replies (bit 15, 14 of a 16-bit frame; datasheet Figures 22, 25 and 28).
+
+| Flag (`AS5047U_Error`) | Bit | Meaning | What to do |
 | --- | --- | --- | --- |
 | `AgcWarning` | 0 | AGC at 0 or 255 | Check the magnet distance; read DIA for which end |
 | `MagHalf` | 1 | AGC at 255 and the magnitude below half its target | Magnet too far or missing |
@@ -132,7 +135,10 @@ what happened since the driver's previous read of it; the sticky flags hold ever
 | `WatchdogError` | 7 | Internal oscillator or watchdog fault | Power-cycle; replace the part if it persists |
 | `OffCompError` | 9 | Offset compensation not finished | Normal right after power-on; wait 10 ms |
 | `CordicOverflow` | 10 | CORDIC overflow | The angle is not valid; check the field |
-| `BusError` | (driver) | The port's `transfer()` returned `false` | Check the SPI driver and the bus; see [Porting](porting.md#bus-errors) |
+| `BusError` | (driver) 11 | The port's `transfer()` returned `false` | Check the SPI driver and the bus; see [Porting](porting.md#bus-errors) |
+| `ReplyCrcError` | (driver) 12 | The CRC of a 24- or 32-bit reply was wrong: MISO was corrupted | Same as `CrcError`; the read was rejected |
+| `ReplyWarning` | (reply) 13 | Warning bit set in a reply | Look at ERRFL bits 0 to 2 in the same flags |
+| `ReplyError` | (reply) 14 | Error bit set in a reply | Look at the ERRFL error bits in the same flags |
 
 After any flag the datasheet asks for a read of DIA (`GetDiagnostics()`) for the details.
 [Troubleshooting](troubleshooting.md) maps symptoms to causes.

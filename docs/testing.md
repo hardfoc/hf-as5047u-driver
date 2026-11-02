@@ -9,7 +9,8 @@ The tests build the real driver against a model of the AS5047U SPI slave
 ([`tests/mock_as5047u.hpp`](../tests/mock_as5047u.hpp)): the frame length selects the format, the reply to a
 command arrives during the next frame, write data frames return the old and then the new content, wrong CRCs set
 ERRFL, and ERRFL clears when read. Every MOSI frame is logged, so tests check the exact bytes on the bus, and the
-model can fail a transfer on demand, to check that bus errors reach the caller.
+model can fail a transfer, corrupt a reply on MISO or set the reply's warning and error bits on demand, to check
+that bus and reply errors reach the caller.
 
 ```bash
 cmake -S . -B build-host -DHF_AS5047U_BUILD_TESTS=ON
@@ -19,7 +20,7 @@ ctest --test-dir build-host --output-on-failure
 
 | File | Covers |
 | --- | --- |
-| [`tests/test_frames.cpp`](../tests/test_frames.cpp) | CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit |
+| [`tests/test_frames.cpp`](../tests/test_frames.cpp) | CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit; reply CRC checks and the reply warning and error bits |
 | [`tests/test_driver.cpp`](../tests/test_driver.cpp) | Velocity sign and scale, zero position split, ABIRES codes, outputs, direction, filter presets, write verification, sticky flags, angle output source, bus-error propagation, `void` legacy ports |
 | [`tests/mock_as5047u.hpp`](../tests/mock_as5047u.hpp) | The chip model |
 | [`tests/test_harness.hpp`](../tests/test_harness.hpp) | A dependency-free test registry and `CHECK` macros |

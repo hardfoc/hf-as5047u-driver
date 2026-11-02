@@ -15,7 +15,9 @@ The source is the datasheet's "SPI Transaction" section (Figures 20 to 31). The 
 | 32 bit | `[31:24]` PAD, `[23]` don't care, `[22]` RW, `[21:8]` address, `[7:0]` CRC | `[31]` warning, `[30]` error, `[29:16]` data, `[15:8]` CRC, `[7:0]` PAD | Daisy chains |
 
 RW is 1 for a read and 0 for a write. The warning and error bits report a problem in the **previous** command
-frame; the details are in ERRFL.
+frame; the details are in ERRFL. The driver records them from every reply with a valid CRC (every 16-bit reply) as
+the sticky flags `ReplyWarning` and `ReplyError`. They do not fail the access: the data in the reply is still the
+register content, and the ERRFL read that follows every access says what the problem was.
 
 Pick the format with the constructor or `SetFrameFormat()`:
 
@@ -43,9 +45,11 @@ The initial value makes an all-zero frame invalid: `0x000000` would otherwise be
 computes it with `AS5047U<>::ComputeCRC8(uint16_t)`, a `constexpr` function; the host tests check it against an
 independent implementation for all 65536 inputs.
 
-A frame whose CRC is wrong is not executed and sets `CRC_error` in ERRFL. The driver also computes the CRC of each
-24- and 32-bit reply but does not act on a mismatch: errors reach your code through ERRFL and the sticky flags
-([API guide](api-guide.md#handle-errors)).
+A frame whose CRC is wrong is not executed and sets `CRC_error` in ERRFL. In the other direction the driver checks
+the CRC of every 24- and 32-bit reply whose content it uses (the data of a read, the ERRFL value, both replies of
+a write): a mismatch means the reply was corrupted on MISO, so the access fails, sets the `ReplyCrcError` sticky
+flag and is repeated when the call has `retries` left. A read that fails this way returns 0, never the corrupted
+value ([API guide](api-guide.md#handle-errors)). 16-bit frames carry no CRC, so nothing protects their replies.
 
 ## Read
 
@@ -103,7 +107,8 @@ frame, plus at least 350 ns of CSn high between frames and your port's own overh
 | `SetDirection()`, `SetABIResolution()` and other one-field setters | 7 (read, then write) | 16.8 µs |
 | `ConfigureInterface()` | 14 | 33.6 µs |
 
-A failed write verification adds four frames for ERRFL and repeats the write.
+A failed write verification adds four frames for ERRFL and repeats the write. A rejected reply (wrong CRC) ends the
+access at that frame; a retry starts it again.
 
 ## Daisy chains and the PAD byte
 

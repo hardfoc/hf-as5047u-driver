@@ -472,12 +472,19 @@ AS5047U_REG::DIA AS5047U<SpiType>::GetDiagnostics() const {
 // - 32-bit (Figures 26-28): MOSI [31:24] PAD, then the 24-bit frame;
 //                           MISO [31] warning, [30] error, [29:16] DATA, [15:8] CRC, [7:0] PAD.
 // In every format the 16-bit word (RW and address, or the data) leads the frame after the PAD, and
-// the CRC covers that word (Figure 31 and "CRC Checksum").
+// the CRC covers that word, MOSI and MISO alike (Figure 31 and "CRC Checksum"). The warning and
+// error bits of a MISO frame report a problem in the previous command frame (Figure 28 text).
 
 // One frame: send `word` in `format`, return the 16-bit reply word (warning, error, 14 data bits).
 // False when the port's transfer() reports a bus error; that also sets the BusError sticky flag.
+// The warning / error bits of every reply with a valid CRC (any 16-bit reply) are recorded as the
+// ReplyWarning / ReplyError sticky flags. They do not fail the frame: the data of the reply is
+// still valid, and ERRFL, read after every access, has the cause. `inspect` marks a reply whose
+// content the caller uses: a wrong CRC on it sets ReplyCrcError and fails the frame. The CRC of a
+// reply the driver discards is not enforced (its bits are then not recorded either).
 template <typename SpiType>
-bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t& reply) const {
+bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t& reply,
+                                     bool inspect) const {
   uint8_t tx[4] = {};
   uint8_t rx[4] = {};
   std::size_t len = 2;
@@ -500,6 +507,19 @@ bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t
     return false;
   }
   reply = static_cast<uint16_t>((static_cast<uint16_t>(rx[0]) << 8) | rx[1]);
+  const bool crc_ok = (format == FrameFormat::SPI_16) || (rx[2] == ComputeCRC8(reply));
+  if (crc_ok) {
+    if ((reply & kReplyWarningBit) != 0U) {
+      sticky_errors_.fetch_or(static_cast<uint16_t>(AS5047U_Error::ReplyWarning));
+    }
+    if ((reply & kReplyErrorBit) != 0U) {
+      sticky_errors_.fetch_or(static_cast<uint16_t>(AS5047U_Error::ReplyError));
+    }
+  }
+  if (inspect && !crc_ok) {
+    sticky_errors_.fetch_or(static_cast<uint16_t>(AS5047U_Error::ReplyCrcError));
+    return false;
+  }
   return true;
 }
 
@@ -510,7 +530,7 @@ bool AS5047U<SpiType>::rawReadRegister(uint16_t address, uint16_t& value) const 
   uint16_t reply = 0;
   const bool ok =
       transferFrame(frame_format_, static_cast<uint16_t>(kReadBit | (address & 0x3FFF)), reply) &&
-      transferFrame(frame_format_, kReadBit | AS5047U_REG::NOP::ADDRESS, reply);
+      transferFrame(frame_format_, kReadBit | AS5047U_REG::NOP::ADDRESS, reply, true);
   value = ok ? static_cast<uint16_t>(reply & 0x3FFF) : 0U;
   return ok;
 }
@@ -576,8 +596,8 @@ bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t r
   for (uint8_t attempt = 0; attempt <= retries; ++attempt) {
     uint16_t reply = 0;
     const bool sent = transferFrame(format, address & 0x3FFF, reply) && // RW = 0: write
-                      transferFrame(format, expected, reply) &&         // MISO: old content
-                      transferFrame(format, kReadBit | AS5047U_REG::NOP::ADDRESS, reply);
+                      transferFrame(format, expected, reply, true) &&   // MISO: old content
+                      transferFrame(format, kReadBit | AS5047U_REG::NOP::ADDRESS, reply, true);
     const uint16_t read_back = reply & 0x3FFF; // MISO on the NOP: new content
     if (sent && read_back == expected) {
       return true;

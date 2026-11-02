@@ -31,6 +31,11 @@ All notable changes to this driver are listed here. The format follows
 
 ### Fixed
 
+- The CRC of each 24- and 32-bit reply the driver uses is checked: a corrupted reply fails the access (retried
+  when `retries` allows; a failed read returns 0) and sets the new `ReplyCrcError` sticky flag, instead of being
+  returned as data. The warning and error bits of the replies are recorded as the new `ReplyWarning` and
+  `ReplyError` sticky flags. Datasheet "SPI Transaction" Figures 22, 25 and 28 (MISO data frames) and "CRC
+  Checksum" with Figure 31.
 - Every ERRFL value the driver reads reaches the sticky flags: `GetErrorFlags()` and `ReadReg<ERRFL>()` used to
   read ERRFL a second time for the sticky update, which returned 0 and dropped the flags (datasheet Figure 33).
   `GetErrorFlags()` no longer re-reads ERRFL until it reads 0.
