@@ -1,1 +1,0 @@
-Sitemap: https://hardfoc.github.io/hf-as5047u-driver/development/sitemap.xml

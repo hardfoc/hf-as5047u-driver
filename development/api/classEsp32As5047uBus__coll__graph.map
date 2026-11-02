@@ -1,5 +1,0 @@
-<map id="Esp32As5047uBus" name="Esp32As5047uBus">
-<area shape="rect" id="Node000001" title="ESP32 SPI transport implementation for AS5047U driver." alt="" coords="20,93,161,119"/>
-<area shape="rect" id="Node000002" href="$classas5047u_1_1SpiInterface.html" title=" " alt="" coords="5,5,176,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,59,93,93,88,93,88,59"/>
-</map>
