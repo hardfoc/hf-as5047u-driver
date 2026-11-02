@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['getadaptivefilterenabled_0',['GetAdaptiveFilterEnabled',['../classas5047u_1_1_a_s5047_u.html#a99e0ec7d2de785a76c7d0008c2648848',1,'as5047u::AS5047U']]],
+  ['getagc_1',['GetAGC',['../classas5047u_1_1_a_s5047_u.html#afeef2fe3e619ddb7fc1dd60c00a7faf4',1,'as5047u::AS5047U']]],
+  ['getangle_2',['getangle',['../classas5047u_1_1_a_s5047_u.html#a4b90fcf2e216c5131f3a9d9dcdfeb183',1,'as5047u::AS5047U::GetAngle(uint8_t retries=AS5047U_CFG::CRC_RETRIES) const'],['../classas5047u_1_1_a_s5047_u.html#aa013d8752fdfc03bf929a1842e8d1072',1,'as5047u::AS5047U::GetAngle(AngleUnit unit, uint8_t retries=AS5047U_CFG::CRC_RETRIES) const']]],
+  ['getangledegrees_3',['GetAngleDegrees',['../classas5047u_1_1_a_s5047_u.html#a656ca2a0d4d4a00343b2ea3531c6c4e7',1,'as5047u::AS5047U']]],
+  ['getangleoutputsource_4',['GetAngleOutputSource',['../classas5047u_1_1_a_s5047_u.html#a462f687e1c59f66298912fd59fe62c53',1,'as5047u::AS5047U']]],
+  ['getangleradians_5',['GetAngleRadians',['../classas5047u_1_1_a_s5047_u.html#ad51e6f501e9b8513db94ef08e1cdffc1',1,'as5047u::AS5047U']]],
+  ['getdiagnostics_6',['GetDiagnostics',['../classas5047u_1_1_a_s5047_u.html#acd336fa5933930e1dddfaaf4f1bfa63c',1,'as5047u::AS5047U']]],
+  ['getdriverversion_7',['getdriverversion',['../namespaceas5047u.html#a1ac9f45cdcea4ae68476603a1b2d0c2d',1,'as5047u::GetDriverVersion()'],['../classas5047u_1_1_a_s5047_u.html#a43d902329bb693cff2b5267b04729c4d',1,'as5047u::AS5047U::GetDriverVersion() noexcept']]],
+  ['getdriverversionmajor_8',['GetDriverVersionMajor',['../classas5047u_1_1_a_s5047_u.html#a40d9ca5cd579d76d6a5dddf05ea0b69b',1,'as5047u::AS5047U']]],
+  ['getdriverversionminor_9',['GetDriverVersionMinor',['../classas5047u_1_1_a_s5047_u.html#a7554b4e98ff6e8338a5e992deef3b006',1,'as5047u::AS5047U']]],
+  ['getdriverversionpatch_10',['GetDriverVersionPatch',['../classas5047u_1_1_a_s5047_u.html#a351a5ae56959161d5487c0434c7d4fe9',1,'as5047u::AS5047U']]],
+  ['geterrorflags_11',['GetErrorFlags',['../classas5047u_1_1_a_s5047_u.html#a2d09b3ebefe1e09b0a070884e97c8503',1,'as5047u::AS5047U']]],
+  ['getfilterparameters_12',['GetFilterParameters',['../classas5047u_1_1_a_s5047_u.html#a9073d0f810802f6f4352a82f6c17251a',1,'as5047u::AS5047U']]],
+  ['gethysteresis_13',['GetHysteresis',['../classas5047u_1_1_a_s5047_u.html#a2102a17ade8779933b98f2daaede5d27',1,'as5047u::AS5047U']]],
+  ['getmagnitude_14',['GetMagnitude',['../classas5047u_1_1_a_s5047_u.html#a2c54281e3a901f914abf190e3df06db0',1,'as5047u::AS5047U']]],
+  ['getrawangle_15',['GetRawAngle',['../classas5047u_1_1_a_s5047_u.html#a0b1a8d4068ec3df2b59f8791e1bca6ab',1,'as5047u::AS5047U']]],
+  ['getstickyerrorflags_16',['GetStickyErrorFlags',['../classas5047u_1_1_a_s5047_u.html#acbb02f734017c28150d2a7a9ecb1642f',1,'as5047u::AS5047U']]],
+  ['getvelocity_17',['getvelocity',['../classas5047u_1_1_a_s5047_u.html#ac4ee41f4ea8479b5aa0876d3bab26df5',1,'as5047u::AS5047U::GetVelocity(uint8_t retries=AS5047U_CFG::CRC_RETRIES) const'],['../classas5047u_1_1_a_s5047_u.html#accafcb6b3e10e3668c6eede930f23508',1,'as5047u::AS5047U::GetVelocity(VelocityUnit unit, uint8_t retries=AS5047U_CFG::CRC_RETRIES) const']]],
+  ['getvelocitydegpersec_18',['GetVelocityDegPerSec',['../classas5047u_1_1_a_s5047_u.html#a06057a7ce4b63baaa48f54414d8d6e19',1,'as5047u::AS5047U']]],
+  ['getvelocityradpersec_19',['GetVelocityRadPerSec',['../classas5047u_1_1_a_s5047_u.html#aebe7ce70b261ba5fa7f1e4101c8c7de4',1,'as5047u::AS5047U']]],
+  ['getvelocityrpm_20',['GetVelocityRPM',['../classas5047u_1_1_a_s5047_u.html#a57da214c96f3a428ab9c2cf9a645bf3f',1,'as5047u::AS5047U']]],
+  ['getzeroposition_21',['GetZeroPosition',['../classas5047u_1_1_a_s5047_u.html#a6da86455bf1de6bd8de3493fc41c3a2d',1,'as5047u::AS5047U']]]
+];
