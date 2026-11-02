@@ -44,6 +44,8 @@ sequenceDiagram
 ```
 
 Each setter is a read-modify-write of one register, so it leaves the other fields of that register as they were.
+If a `transfer()` returns `false`, or a reply the driver uses has a wrong CRC, the call stops at that frame and
+returns `false`; when that happens during the read, nothing is written.
 
 ## Why CRTP
 
