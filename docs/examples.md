@@ -13,10 +13,10 @@ pull request.
 | App | What it shows | Source | CI |
 | --- | --- | --- | --- |
 | `driver_integration_test` :material-star:{ title="featured" } | Comprehensive driver integration test suite (hardware required for full validation) | [`driver_integration_test.cpp`](../examples/esp32/main/driver_integration_test.cpp) | yes |
-| `basic_angle_reading` :material-star:{ title="featured" } | Basic angle reading example with diagnostics | [`basic_angle_reading_example.cpp`](../examples/esp32/main/basic_angle_reading_example.cpp) | no |
-| `velocity_reading` :material-star:{ title="featured" } | Velocity reading example with unit conversions | [`velocity_reading_example.cpp`](../examples/esp32/main/velocity_reading_example.cpp) | no |
-| `configuration_example` :material-star:{ title="featured" } | Configuration example with ABI, UVW, zero position, and direction setup | [`configuration_example.cpp`](../examples/esp32/main/configuration_example.cpp) | no |
-| `full_features` :material-star:{ title="featured" } | Comprehensive example demonstrating core AS5047U features | [`full_features_example.cpp`](../examples/esp32/main/full_features_example.cpp) | no |
+| `basic_angle_reading` :material-star:{ title="featured" } | Basic angle reading example with diagnostics | [`basic_angle_reading_example.cpp`](../examples/esp32/main/basic_angle_reading_example.cpp) | yes |
+| `velocity_reading` :material-star:{ title="featured" } | Velocity reading example with unit conversions | [`velocity_reading_example.cpp`](../examples/esp32/main/velocity_reading_example.cpp) | yes |
+| `configuration_example` :material-star:{ title="featured" } | Configuration example with ABI, UVW, zero position, and direction setup | [`configuration_example.cpp`](../examples/esp32/main/configuration_example.cpp) | yes |
+| `full_features` :material-star:{ title="featured" } | Comprehensive example demonstrating core AS5047U features | [`full_features_example.cpp`](../examples/esp32/main/full_features_example.cpp) | yes |
 
 Build and flash one (from `examples/esp32`, ESP-IDF environment loaded):
 

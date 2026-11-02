@@ -1,12 +1,12 @@
 /**
  * @file configuration_example.cpp
- * @brief Configuration example with ABI, UVW, and PWM setup
+ * @brief Configuration example with ABI, UVW, zero position and direction setup
  *
  * This example demonstrates:
  * - ABI output configuration
  * - UVW commutation setup
- * - PWM output configuration
  * - Zero position and direction setting
+ * - Checking every setter's result (false: the write did not read back, or the bus failed)
  *
  * @author N3b3x
  * @date 2025
@@ -47,27 +47,26 @@ extern "C" void app_main(void) {
 
   ESP_LOGI(TAG, "as5047u::AS5047U encoder initialized");
 
-  // Configure ABI output (12-bit resolution)
-  encoder.SetABIResolution(12);
-  ESP_LOGI(TAG, "ABI output configured: 12-bit resolution");
+  // Each setter returns false when the value did not read back as written or a frame failed;
+  // the sticky error flags say why.
+  const auto report = [&encoder](bool ok, const char* what) {
+    if (ok) {
+      ESP_LOGI(TAG, "%s", what);
+    } else {
+      ESP_LOGE(TAG, "%s: FAILED (sticky flags 0x%04X)", what,
+               static_cast<unsigned>(encoder.ClearStickyErrorFlags()));
+    }
+    return ok;
+  };
 
-  // Configure UVW commutation (5 pole pairs)
-  encoder.SetUVWPolePairs(5);
-  ESP_LOGI(TAG, "UVW commutation configured: 5 pole pairs");
+  bool ok = true;
+  ok &= report(encoder.SetABIResolution(12), "ABI output configured: 12-bit resolution");
+  ok &= report(encoder.SetUVWPolePairs(5), "UVW commutation configured: 5 pole pairs");
+  ok &= report(encoder.ConfigureInterface(true, false, false), "Interface configured: ABI enabled");
+  ok &= report(encoder.SetZeroPosition(0), "Zero position set: 0");
+  ok &= report(encoder.SetDirection(true), "Direction set: clockwise");
 
-  // Configure interface (ABI enabled, UVW disabled, PWM disabled)
-  encoder.ConfigureInterface(true, false, false);
-  ESP_LOGI(TAG, "Interface configured: ABI enabled");
-
-  // Set zero position (example: 0)
-  encoder.SetZeroPosition(0);
-  ESP_LOGI(TAG, "Zero position set: 0");
-
-  // Set direction (clockwise)
-  encoder.SetDirection(true);
-  ESP_LOGI(TAG, "Direction set: clockwise");
-
-  ESP_LOGI(TAG, "Configuration complete. Starting angle reading...");
+  ESP_LOGI(TAG, "Configuration %s. Starting angle reading...", ok ? "complete" : "incomplete");
 
   // Main reading loop
   while (true) {

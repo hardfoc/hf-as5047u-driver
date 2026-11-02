@@ -17,7 +17,8 @@ registers in one go, and tells transport problems (all zeros, all ones) apart fr
 
 ## CRC or framing errors
 
-`CrcError` or `FramingError` in the sticky flags or in `GetErrorFlags()`.
+`CrcError` or `FramingError` in the sticky flags or in `GetErrorFlags()` (the chip saw a bad MOSI frame), or
+`ReplyCrcError` in the sticky flags (the driver saw a bad MISO frame).
 
 | Cause | Fix |
 | --- | --- |
@@ -60,16 +61,15 @@ are sure of them ([OTP programming](otp.md)).
 
 ## A setter returns false
 
-The value did not read back as written. The driver prints a line like this (through `printf`):
+The value did not read back as written, or a frame of the write failed. The driver prints nothing; clear the sticky
+flags, call the setter again and read them:
 
-```text
-AS5047U write verify failed: addr=0x0019 expected=0x0004 read_back=0x0000 ERRFL=0x0040 (CRC_error=1 Framing_error=0 Command_error=0)
-```
-
-| ERRFL bits in the line | Cause |
+| Sticky flags after the call | Cause |
 | --- | --- |
-| `CRC_error=1` | The write frame was corrupted on the bus: see CRC errors above |
-| `Framing_error=1` or `Command_error=1` | Frame length or chip select |
-| All 0, read-back still different | The register or field is read-only |
+| `CrcError` | The write frame was corrupted on the bus: see CRC errors above |
+| `FramingError` or `CommandError` | Frame length or chip select |
+| `BusError` | The port's `transfer()` returned `false` |
+| `ReplyCrcError` | A reply was corrupted on MISO: see CRC errors above |
+| None | The register or field is read-only, or the value does not stick |
 
 Call the setter with a `retries` value to retry automatically.

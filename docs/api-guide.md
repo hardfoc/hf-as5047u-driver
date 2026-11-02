@@ -21,15 +21,17 @@ One `AS5047U<SpiType>` object per sensor. It offers three levels of access:
 | --- | --- |
 | Angle | `GetAngle()`, `GetAngle(AngleUnit)`, `GetAngleDegrees()`, `GetAngleRadians()`, `GetRawAngle()` |
 | Velocity | `GetVelocity()`, `GetVelocity(VelocityUnit)`, `GetVelocityDegPerSec()`, `GetVelocityRadPerSec()`, `GetVelocityRPM()` |
-| Field and status | `GetAGC()`, `GetMagnitude()`, `GetDiagnostics()`, `GetErrorFlags()`, `GetStickyErrorFlags()`, `DumpStatus()` |
+| Field and status | `GetAGC()`, `GetMagnitude()`, `GetDiagnostics()`, `GetErrorFlags()`, `GetStickyErrorFlags()`, `ClearStickyErrorFlags()`, `DumpStatus()` |
 | Angle settings | `SetZeroPosition()`, `GetZeroPosition()`, `SetDirection()`, `SetDynamicAngleCompensation()`, `SetAngleOutputSource()` |
 | Filter | `SetFilterPreset()`, `SetAdaptiveFilter()`, `SetFilterParameters()`, `GetFilterParameters()`, `GetAdaptiveFilterEnabled()` |
 | Outputs | `ConfigureInterface()`, `SetABIResolution()`, `SetIndexPulseLength()`, `SetUVWPolePairs()`, `SetHysteresis()` |
-| Chip | `Set150CTemperatureMode()`, `ProgramOTP()` |
+| Chip | `Set150CTemperatureMode()`, `ProgramOTP()`, `VerifyOTP()` |
 | Bus | `SetFrameFormat()`, `SetPad()`, `ComputeCRC8()` |
 
-Setters return `bool`: `false` means the value did not read back as written. Measurements return the value; their
-errors are reported through the error flags (below). Nothing throws and nothing allocates.
+Setters return `bool`: `false` means the value did not read back as written, or a frame failed on the bus (the
+port's `transfer()` returned `false`). Measurements return the value (0 when the read failed); their errors are
+reported through the error flags (below). `ReadReg(reg)` reads any register and returns whether the read worked.
+Nothing throws and nothing allocates.
 
 Every call that takes a `retries` argument (default `AS5047U_CFG::CRC_RETRIES`, 0) repeats the access that many
 times when the chip reports a CRC or framing error.
@@ -104,21 +106,24 @@ its "Volatile Registers" and "Non-Volatile Registers (OTP)" sections.
 
 ## Handle errors
 
-The chip reports errors in ERRFL (0x0001), which clears when it is read. Every `readRegister()` inside the driver
-reads ERRFL after the register and ORs its bits into a set of **sticky flags**; `GetStickyErrorFlags()` returns
-them and clears them.
+The chip reports errors in ERRFL (0x0001), which clears when it is read (datasheet Figure 33). Every register
+read inside the driver reads ERRFL after the register and ORs its bits into a set of **sticky flags**; so does
+`GetErrorFlags()` and `ReadReg<AS5047U_REG::ERRFL>()`, so no ERRFL value the driver reads is lost.
+`GetStickyErrorFlags()` returns the flags and leaves them set; `ClearStickyErrorFlags()` clears them and returns
+what it cleared, in one atomic step.
 
 ```cpp
 --8<-- "tests/docs/api_tasks.cpp:errors"
 ```
 
-!!! warning "The measurement getters consume the sticky flags"
-    `GetAngle()`, `GetVelocity()`, `GetAGC()`, `GetMagnitude()` and the other retrying getters call
-    `GetStickyErrorFlags()` themselves to decide whether to retry, so the flags of that read are gone when the call
-    returns. To act on the flags of a sample, read it with `ReadReg<>()` as above. `GetErrorFlags()` reads ERRFL
-    from the chip, which only shows what happened since the driver's last read of it.
+The getters decide on a retry from the ERRFL of their own read, so they never consume the sticky flags: the flags
+of every sample stay visible until you clear them. `GetErrorFlags()` returns the chip's ERRFL, which only shows
+what happened since the driver's previous read of it; the sticky flags hold everything since your last clear.
 
-| Flag (`AS5047U_Error`) | ERRFL bit | Meaning | What to do |
+Bits 0 to 10 are the ERRFL bits. Bits 11 and 12 are errors the driver detects itself; bits 13 and 14 are the warning
+and error bits of the chip's replies (bit 15, 14 of a 16-bit frame; datasheet Figures 22, 25 and 28).
+
+| Flag (`AS5047U_Error`) | Bit | Meaning | What to do |
 | --- | --- | --- | --- |
 | `AgcWarning` | 0 | AGC at 0 or 255 | Check the magnet distance; read DIA for which end |
 | `MagHalf` | 1 | AGC at 255 and the magnitude below half its target | Magnet too far or missing |
@@ -130,6 +135,10 @@ them and clears them.
 | `WatchdogError` | 7 | Internal oscillator or watchdog fault | Power-cycle; replace the part if it persists |
 | `OffCompError` | 9 | Offset compensation not finished | Normal right after power-on; wait 10 ms |
 | `CordicOverflow` | 10 | CORDIC overflow | The angle is not valid; check the field |
+| `BusError` | (driver) 11 | The port's `transfer()` returned `false` | Check the SPI driver and the bus; see [Porting](porting.md#bus-errors) |
+| `ReplyCrcError` | (driver) 12 | The CRC of a 24- or 32-bit reply was wrong: MISO was corrupted | Same as `CrcError`; the read was rejected |
+| `ReplyWarning` | (reply) 13 | Warning bit set in a reply | Look at ERRFL bits 0 to 2 in the same flags |
+| `ReplyError` | (reply) 14 | Error bit set in a reply | Look at the ERRFL error bits in the same flags |
 
 After any flag the datasheet asks for a read of DIA (`GetDiagnostics()`) for the details.
 [Troubleshooting](troubleshooting.md) maps symptoms to causes.

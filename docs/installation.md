@@ -5,8 +5,7 @@ Add the driver to a CMake or ESP-IDF project. It is a header-only C++20 library 
 ## Requirements
 
 - A C++20 compiler: GCC 10 or later, Clang 12 or later. The host CI builds with GCC and Clang on Ubuntu 24.04.
-- No RTOS, heap or exceptions. The driver uses `printf` in `DumpStatus()` and when a write fails its read-back
-  check.
+- No RTOS, heap or exceptions. The only output is `DumpStatus()`, which prints through `printf` when you call it.
 
 ## Get the source
 
@@ -29,6 +28,15 @@ target_link_libraries(my_app PRIVATE hf_as5047u)   # or the alias hf::as5047u
 
 `hf_as5047u` is an `INTERFACE` target: it carries the include directories (including the generated version
 header) and requires C++20 (`cxx_std_20`), so your target does not need to set either.
+
+An installed copy works the same way. `cmake --install` puts the headers, the template implementation
+`as5047u.ipp` and the generated `as5047u_version.h` in one include directory and exports the package
+`hf_as5047u`:
+
+```cmake
+find_package(hf_as5047u CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE hf::as5047u)
+```
 
 | Option | Default | Effect |
 | --- | --- | --- |

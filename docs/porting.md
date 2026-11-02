@@ -21,7 +21,7 @@ allocate.
 
 | Method | Contract |
 | --- | --- |
-| `void transfer(const uint8_t* tx, uint8_t* rx, std::size_t len)` | Pull CSn low, clock out `len` bytes from `tx` while storing `len` bytes into `rx`, release CSn. `len` is 2, 3 or 4. The driver always passes both buffers |
+| `bool transfer(const uint8_t* tx, uint8_t* rx, std::size_t len)` | Pull CSn low, clock out `len` bytes from `tx` while storing `len` bytes into `rx`, release CSn. Return `true` when the frame went out, `false` on a bus error. `len` is 2, 3 or 4. The driver always passes both buffers |
 
 The driver builds every byte of every frame, including the CRC and the PAD; your port only moves bytes.
 
@@ -41,8 +41,18 @@ Rules the transfer must follow:
   frames ([Hardware](hardware.md#timing)).
 - **Blocking.** Return only when the frame is complete and `rx` is filled. The driver uses the reply of one call to
   build the next.
-- **No error return.** `transfer()` returns `void`; a bus failure you cannot hide should be logged by the port.
-  The chip's ERRFL then reports the framing or CRC error on the next read.
+
+## Bus errors
+
+Return `false` from `transfer()` when your SDK reports a failure. The driver stops the access that sent the frame:
+the setters, `WriteReg()` and `ProgramOTP()` return `false`, `ReadReg(reg)` returns `false`, and every failed
+frame sets `AS5047U_Error::BusError` in the sticky flags, which is how the measurement getters (they return a
+value, 0 for a failed read) report it. A read-modify-write setter whose read fails writes nothing. Calls with a
+`retries` argument repeat a failed access.
+
+Return a `bool`, not your SDK's status code: the driver rejects any other return type at compile time, so an
+`esp_err_t` (where 0 is success) cannot be read as `false`. A port written for the earlier contract, with a `void`
+`transfer()`, still compiles; the driver treats it as never failing.
 
 ## Reference implementation
 

@@ -56,7 +56,8 @@ Package and memory
   uncompensated angle, velocity in LSB, °/s, rad/s or rpm, AGC and magnitude. See [API guide](api-guide.md).
 - **All three frame formats.** 16-bit frames for the fastest reads, 24-bit frames with CRC, 32-bit frames with a
   PAD byte for daisy chains. Writes always use a CRC frame. See [SPI protocol](protocol.md).
-- **Checked writes.** Every register write is read back on the next frame and retried on request. See
+- **Checked writes and replies.** Every register write is read back on the next frame, every 24- and 32-bit reply
+  the driver uses is CRC-checked, and port bus errors fail the call; all are retried on request. See
   [API guide](api-guide.md#handle-errors).
 - **The outputs configured in one call.** ABI resolution, index width, UVW pole pairs, PWM pin, hysteresis,
   direction, zero position, DAEC and the adaptive filter. See [Configuration](configuration.md).

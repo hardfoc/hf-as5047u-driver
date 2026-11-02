@@ -4,32 +4,36 @@
  * @copyright Copyright (c) 2024-2025 HardFOC. All rights reserved.
  */
 #pragma once
-#include "as5047u_spi_interface.hpp"
 #include "as5047u_registers.hpp"
+#include "as5047u_spi_interface.hpp"
 #include "as5047u_version.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <bitset>
-#include <cmath> // for M_PI and math functions
 #include <cstdint>
-#include <cstdio>     // for printf
+#include <cstdio>     // for printf in DumpStatus()
 #include <functional> // for std::function
 #include <utility>    // for std::pair
 
-// Error flags from ERRFL register
+// Error flags: bits 0-10 are the ERRFL register (datasheet Figure 33); bits 11-15, which ERRFL does
+// not use, are errors the driver detects itself.
 enum class AS5047U_Error : uint16_t {
   None = 0,
-  AgcWarning = 1 << 0,     ///< AGC reached minimum (0) or maximum (255) value
-  MagHalf = 1 << 1,        ///< Magnetic field is half of regulated value (AGC=255)
-  P2ramWarning = 1 << 2,   ///< ECC corrected 1 bit in P2RAM customer area
-  P2ramError = 1 << 3,     ///< ECC detected 2+ uncorrectable errors in P2RAM
-  FramingError = 1 << 4,   ///< SPI framing error
-  CommandError = 1 << 5,   ///< Invalid SPI command received
-  CrcError = 1 << 6,       ///< CRC error during SPI communication
-  WatchdogError = 1 << 7,  ///< Internal oscillator or watchdog not working proper
-  OffCompError = 1 << 9,   ///< Internal offset compensation not finished
-  CordicOverflow = 1 << 10 ///< CORDIC algorithm overflow
+  AgcWarning = 1 << 0,      ///< AGC reached minimum (0) or maximum (255) value
+  MagHalf = 1 << 1,         ///< Magnetic field is half of regulated value (AGC=255)
+  P2ramWarning = 1 << 2,    ///< ECC corrected 1 bit in P2RAM customer area
+  P2ramError = 1 << 3,      ///< ECC detected 2+ uncorrectable errors in P2RAM
+  FramingError = 1 << 4,    ///< SPI framing error
+  CommandError = 1 << 5,    ///< Invalid SPI command received
+  CrcError = 1 << 6,        ///< CRC error during SPI communication
+  WatchdogError = 1 << 7,   ///< Internal oscillator or watchdog not working proper
+  OffCompError = 1 << 9,    ///< Internal offset compensation not finished
+  CordicOverflow = 1 << 10, ///< CORDIC algorithm overflow
+  BusError = 1 << 11,       ///< Driver: the port's transfer() reported a bus error
+  ReplyCrcError = 1 << 12,  ///< Driver: the CRC of a 24/32-bit MISO frame was wrong
+  ReplyWarning = 1 << 13,   ///< Chip: warning bit set in a MISO frame (DS Figures 22, 25, 28)
+  ReplyError = 1 << 14      ///< Chip: error bit set in a MISO frame (DS Figures 22, 25, 28)
 };
 
 // -----------------------------------------------------------------------------
@@ -46,6 +50,33 @@ enum class AS5047U_Error : uint16_t {
 // as5047u Namespace
 // -----------------------------------------------------------------------------
 namespace as5047u {
+
+/// Number of non-volatile registers burned into OTP: DISABLE (0x0015) to ECC (0x001B).
+inline constexpr std::size_t kOtpRegisterCount = 7;
+/// First non-volatile register address (DISABLE).
+inline constexpr uint16_t kOtpFirstAddress = 0x0015;
+
+/**
+ * @brief Outcome of AS5047U::ProgramOTP().
+ *
+ * The step numbers are those of the datasheet's step-by-step OTP procedure
+ * (DS000637 v1-01, page 41-42).
+ */
+struct OtpResult {
+  /// Datasheet step that failed (4 to 19), or 0 when every step succeeded.
+  uint8_t failed_step = 0;
+  /// True once step 13 (PROGOTP) was sent: the fuses may be burned, even if a
+  /// later step failed. A part that failed after this must not be used.
+  bool burn_started = false;
+  /// DISABLE..ECC (0x0015..0x001B) as verified in step 11, the content that
+  /// was burned. Compare after the power-on cycle with VerifyOTP().
+  std::array<uint16_t, kOtpRegisterCount> written{};
+};
+
+/// Pi as a float constant. M_PI is not standard C++ (absent with MSVC unless _USE_MATH_DEFINES,
+/// and with strict-ANSI newlib builds); C++20's std::numbers::pi_v<float> is not on every
+/// toolchain.
+inline constexpr float kPi = 3.14159265358979323846F;
 
 /** @brief Units for angle-returning APIs. */
 enum class AngleUnit : uint8_t {
@@ -172,21 +203,21 @@ public:
   /** @brief Angle conversion helpers. */
   struct Angle {
     static constexpr float DEG_PER_LSB = 360.0F / 16384.0F;
-    static constexpr float RAD_PER_LSB = (2.0F * static_cast<float>(M_PI)) / 16384.0F;
+    static constexpr float RAD_PER_LSB = (2.0F * kPi) / 16384.0F;
 
     static constexpr uint16_t DegreesToLsb(float degrees) noexcept {
       return static_cast<uint16_t>((degrees * 16384.0F) / 360.0F) & 0x3FFF;
     }
 
     static constexpr uint16_t RadiansToLsb(float radians) noexcept {
-      return static_cast<uint16_t>((radians * 16384.0F) / (2.0F * static_cast<float>(M_PI))) & 0x3FFF;
+      return static_cast<uint16_t>((radians * 16384.0F) / (2.0F * kPi)) & 0x3FFF;
     }
   };
 
   /** @brief Helper constants and methods for velocity unit conversions. */
   struct Velocity {
     static constexpr float DEG_PER_LSB = 24.141F;
-    static constexpr float RAD_PER_LSB = DEG_PER_LSB * M_PI / 180.0F;
+    static constexpr float RAD_PER_LSB = DEG_PER_LSB * kPi / 180.0F;
     static constexpr float RPM_PER_LSB = DEG_PER_LSB * (60.0F / 360.0F);
   };
 
@@ -223,10 +254,14 @@ public:
   [[nodiscard]] uint16_t GetMagnitude(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
-   * @brief Read and clear error flags.
-   * @param retries Number of retries on CRC/framing error (default 0 = no
-   * retry).
-   * @return 16-bit error flag register (ERRFL). All flags clear after read.
+   * @brief Read the ERRFL register (0x0001) from the chip.
+   *
+   * The chip clears ERRFL when it is read (datasheet Figure 33), so the value
+   * covers only what happened since the driver's previous read of ERRFL. Every
+   * ERRFL value the driver reads, including this one, is also ORed into the
+   * sticky flags (GetStickyErrorFlags()), so nothing read here is lost.
+   * @param retries Number of retries on a failed read (default 0 = no retry).
+   * @return 16-bit error flag register (ERRFL).
    */
   [[nodiscard]] uint16_t GetErrorFlags(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
@@ -344,23 +379,48 @@ public:
   bool Set150CTemperatureMode(bool enable, uint8_t retries = AS5047U_CFG::CRC_RETRIES);
 
   /**
-   * @brief Permanently program current settings into OTP memory.
+   * @brief Permanently program the current settings into OTP memory.
    *
-   * Performs the full OTP programming sequence:
-   * - Writes current configuration (zero position, settings registers) to
-   * volatile registers.
-   * - Reads current angle and sets it as zero reference.
-   * - Enables ECC, reads and writes ECC checksum.
-   * - Triggers OTP burn and waits for completion.
-   * - Performs guard-band verification (clears registers, refreshes from OTP,
-   * verifies content).
+   * Runs steps 4 to 19 of the datasheet's "Step-by-Step Procedure to
+   * Permanently Program the Non-Volatile Memory (OTP)" (DS000637 v1-01,
+   * page 41-42, flowchart Figure 60), checking the result of every step and
+   * stopping at the first that fails:
+   *  4. read ANGLECOM;  5. write it into ZPOSL[5:0] and ZPOSM[7:0];
+   *  6. read DISABLE..ECC (0x0015..0x001B);  7. ECC = 0x80 (ECC_en);
+   *  8. read ECC_s (0x3FD0);  9. ECC = 0x80 | ECC_s;
+   * 10. read 0x0015..0x001B;  11. compare with what was written;
+   * 12. PROG = 0x01 (PROGEN);  13. PROG = 0x08 (PROGOTP, starts the burn);
+   * 14. poll PROG until it reads 0x0001;
+   * 15. write 0x0000 into 0x0015..0x001B (clear the volatile copy);
+   * 16. PROG = 0x40 (PROGVER, guard band);  17. PROG = 0x04 (OTPREF, reload
+   *     from OTP);  18. read 0x0015..0x001B;  19. compare with step 10.
    *
-   * @return True if programming and verification succeeded, false otherwise.
-   * @warning OTP can be programmed only once. Ensure proper supply voltage
-   * (3.3-3.5V for 3V mode, ~5V for 5V mode) and desired configuration before
-   * use.
+   * Steps 1 to 3 (power-on cycle, write the settings, magnet at the zero
+   * position) come before the call; steps 20 to 22 (power-on cycle, read
+   * back, compare) after it, with VerifyOTP() and the image in @p result.
+   * 16-bit frames are replaced by 24-bit frames for the duration.
+   *
+   * @param result Optional: the step that failed, whether the burn was
+   * started, and the register image that was burned.
+   * @return true if every step succeeded and the guard-band comparison
+   * (step 19) matched.
+   * @warning OTP can be programmed only once, and a part that fails step 19
+   * must not be used (datasheet: "Reprogramming is not allowed!"). VDD 4.5 to
+   * 5.5 V (5 V mode) or 3.3 to 3.5 V (3.3 V mode), 5 to 45 degC (Figure 59).
    */
-  bool ProgramOTP();
+  bool ProgramOTP(OtpResult* result = nullptr);
+
+  /**
+   * @brief Steps 21 and 22 of the OTP procedure: after the power-on cycle
+   * (step 20), read DISABLE..ECC (0x0015..0x001B) and compare them with the
+   * image ProgramOTP() burned.
+   * @param burned OtpResult::written from ProgramOTP().
+   * @param retries Number of retries of each read (default 0 = no retry).
+   * @return true if every register reads as burned; false on a difference
+   * (the part must not be used) or a failed read.
+   */
+  [[nodiscard]] bool VerifyOTP(const std::array<uint16_t, kOtpRegisterCount>& burned,
+                               uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Set the daisy-chain pad byte for 32-bit SPI frames.
@@ -434,6 +494,21 @@ public:
   }
 
   /**
+   * @brief Read a register and report whether the read succeeded.
+   *
+   * @tparam RegT The register type (has a static ADDRESS)
+   * @param reg Receives the register content (value 0 when the read failed)
+   * @param retries Number of retries on a failed read (default 0 = no retry)
+   * @return true if the read went through and the chip reported no CRC or
+   * framing error for it; false on a bus error or such a chip error. The
+   * reason is in the sticky flags (GetStickyErrorFlags()).
+   */
+  template <typename RegT>
+  [[nodiscard]] bool ReadReg(RegT& reg, uint8_t retries = AS5047U_CFG::CRC_RETRIES) const {
+    return readWithRetries(RegT::ADDRESS, retries, reg.value);
+  }
+
+  /**
    * @brief Writes data to a specified register in the AS5047U sensor
    *
    * @tparam RegT The register type which must have an ADDRESS static member and
@@ -441,7 +516,8 @@ public:
    * @param reg The register object containing the data to be written
    * @param retries Number of retries on CRC/framing error (default 0 = no
    * retry)
-   * @return true if write succeeded, false on CRC/framing error
+   * @return true if the value read back as written; false if it did not, or
+   * if the port's transfer() reported a bus error
    */
   template <typename RegT>
   bool WriteReg(const RegT& reg, uint8_t retries = AS5047U_CFG::CRC_RETRIES) {
@@ -449,10 +525,21 @@ public:
   }
 
   /**
-   * @brief Retrieve and clear the accumulated sticky error flags.
-   * @return Bitwise OR of AS5047U_Error enum flags since last call.
+   * @brief Error flags accumulated since the last ClearStickyErrorFlags().
+   *
+   * ERRFL (0x0001) clears on the chip when it is read (datasheet Figure 33),
+   * and the driver reads it after every register access. Every ERRFL value the
+   * driver reads is ORed into this cache, which only ClearStickyErrorFlags()
+   * clears: reading it, and the driver's own retry decisions, leave it intact.
+   * @return Bitwise OR of AS5047U_Error flags.
    */
-  AS5047U_Error GetStickyErrorFlags() const;
+  [[nodiscard]] AS5047U_Error GetStickyErrorFlags() const noexcept;
+
+  /**
+   * @brief Clear the sticky error flags.
+   * @return The flags that were set, read and cleared in one atomic step.
+   */
+  AS5047U_Error ClearStickyErrorFlags() noexcept;
 
   // ===========================================================================
   // Driver Version
@@ -486,9 +573,41 @@ private:
   // Low-level helpers
   //------------------------------------------------------------------
   // Low level register access helpers
-  uint16_t rawReadRegister(uint16_t addr) const; ///< read register without updating sticky errors
-  uint16_t readRegister(uint16_t addr) const;    ///< read register and refresh sticky errors
-  bool writeRegister(uint16_t addr, uint16_t val, uint8_t retries) const;
+  static constexpr uint16_t kReadBit = 0x4000; ///< RW / R bit of a command frame: 1 = read
+  static constexpr uint16_t kReplyWarningBit = 0x8000; ///< MISO warning bit (DS Figure 22, 25, 28)
+  static constexpr uint16_t kReplyErrorBit = 0x4000;   ///< MISO error bit (DS Figure 22, 25, 28)
+
+  /// One SPI frame in @p format; @p reply is the 16-bit reply word. False on a bus error, or, with
+  /// @p inspect (the reply carries data the caller uses), when the reply's CRC is wrong. The
+  /// warning and error bits of every reply with a valid CRC go to the sticky flags.
+  bool transferFrame(FrameFormat format, uint16_t word, uint16_t& reply,
+                     bool inspect = false) const;
+  /// Read a register (command frame, then a NOP for the reply) without reading ERRFL.
+  bool rawReadRegister(uint16_t addr, uint16_t& value) const;
+  /// Read a register, then ERRFL (accumulated into the sticky flags). False on a bus error or when
+  /// the chip reports a CRC or framing error for the access.
+  bool readRegister(uint16_t addr, uint16_t& value) const;
+  uint16_t readRegister(uint16_t addr) const; ///< value only; errors go to the sticky flags
+  /// readRegister(), repeated up to @p retries times while it fails. Never consumes the sticky
+  /// flags.
+  bool readWithRetries(uint16_t addr, uint8_t retries, uint16_t& value) const;
+  uint16_t readWithRetries(uint16_t addr, uint8_t retries) const;
+  /// Write a register and check the read-back (datasheet Figure 30). With @p verify false (a PROG
+  /// command, whose content changes on its own), the write succeeds when the frames went through
+  /// and the following ERRFL read shows no CRC, framing or command error.
+  bool writeRegister(uint16_t addr, uint16_t val, uint8_t retries, bool verify = true) const;
+  /// ProgramOTP() steps 4..19, in the current frame format.
+  bool programOtpSteps(OtpResult& r);
+  /// Read DISABLE..ECC (0x0015..0x001B).
+  bool readOtpRegisters(std::array<uint16_t, kOtpRegisterCount>& regs, uint8_t retries) const;
+  static constexpr uint32_t kOtpPollLimit = 15000; ///< step 14: reads of PROG before giving up
+
+  /// ERRFL bits that make a getter retry its read.
+  static constexpr uint16_t kRetryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
+                                         static_cast<uint16_t>(AS5047U_Error::FramingError);
+  /// ERRFL bits that mean the chip rejected a frame (CRC, framing or command error).
+  static constexpr uint16_t kCommandErrorMask =
+      kRetryMask | static_cast<uint16_t>(AS5047U_Error::CommandError);
 
   SpiType& spi_;             ///< SPI bus reference
   FrameFormat frame_format_; ///< current SPI frame format
@@ -520,7 +639,10 @@ AS5047U<SpiType>::AS5047U(SpiType& bus, FrameFormat format) noexcept
 
 template <typename SpiType>
 inline bool AS5047U<SpiType>::SetDirection(bool clockwise, uint8_t retries) {
-  auto s2 = ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!ReadReg(s2, retries)) {
+    return false;
+  }
   s2.bits.DIR = clockwise ? 0 : 1;
   return WriteReg(s2, retries);
 }
@@ -535,5 +657,5 @@ inline const char* GetDriverVersion() noexcept {
 // Include template implementation
 #define AS5047U_HEADER_INCLUDED
 // NOLINTNEXTLINE(bugprone-suspicious-include) - Intentional: template implementation file
-#include "../src/as5047u.ipp"
+#include "as5047u.ipp"
 #undef AS5047U_HEADER_INCLUDED

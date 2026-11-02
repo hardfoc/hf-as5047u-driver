@@ -47,21 +47,25 @@ extern "C" void app_main(void) {
 
   ESP_LOGI(TAG, "as5047u::AS5047U encoder initialized");
 
-  // Configure advanced features
-  encoder.SetDynamicAngleCompensation(true);
-  ESP_LOGI(TAG, "DAEC enabled");
+  // Configure advanced features. Each setter returns false when the value did not read back as
+  // written or a frame failed; the sticky error flags say why.
+  const auto report = [&encoder](bool ok, const char* what) {
+    if (ok) {
+      ESP_LOGI(TAG, "%s", what);
+    } else {
+      ESP_LOGE(TAG, "%s: FAILED (sticky flags 0x%04X)", what,
+               static_cast<unsigned>(encoder.ClearStickyErrorFlags()));
+    }
+  };
 
-  encoder.SetAdaptiveFilter(true);
-  ESP_LOGI(TAG, "Adaptive filter enabled");
-
-  encoder.SetFilterParameters(2, 3);
-  ESP_LOGI(TAG, "Filter parameters set: K_min=2, K_max=3");
+  report(encoder.SetDynamicAngleCompensation(true), "DAEC enabled");
+  report(encoder.SetAdaptiveFilter(true), "Adaptive filter enabled");
+  report(encoder.SetFilterParameters(2, 3), "Filter parameters set: K_min code 2, K_max code 3");
 
   // Configure outputs
-  encoder.SetABIResolution(12);
-  encoder.SetUVWPolePairs(5);
-  encoder.ConfigureInterface(true, true, false);
-  ESP_LOGI(TAG, "Outputs configured: ABI (12-bit), UVW (5 pole pairs)");
+  report(encoder.SetABIResolution(12) && encoder.SetUVWPolePairs(5) &&
+             encoder.ConfigureInterface(true, true, false),
+         "Outputs configured: ABI (12-bit), UVW (5 pole pairs)");
 
   ESP_LOGI(TAG, "Starting comprehensive reading loop...");
 
@@ -84,7 +88,7 @@ extern "C" void app_main(void) {
     ESP_LOGI(TAG, "AGC: %u, Magnitude: %u", agc, mag);
 
     // Check for errors
-    AS5047U_Error errors = encoder.GetStickyErrorFlags();
+    AS5047U_Error errors = encoder.ClearStickyErrorFlags(); // report each flag once
     if (errors != AS5047U_Error::None) {
       ESP_LOGW(TAG, "Errors: 0x%04X", static_cast<uint16_t>(errors));
     }

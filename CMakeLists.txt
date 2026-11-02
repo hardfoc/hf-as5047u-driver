@@ -21,6 +21,7 @@ if(HF_AS5047U_SOURCE_FILES)
     target_include_directories(${HF_AS5047U_TARGET_NAME}
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/inc>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
             $<BUILD_INTERFACE:${HF_AS5047U_VERSION_HEADER_DIR}>
             $<INSTALL_INTERFACE:include>
     )
@@ -30,6 +31,7 @@ else()
     target_include_directories(${HF_AS5047U_TARGET_NAME}
         INTERFACE
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/inc>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
             $<BUILD_INTERFACE:${HF_AS5047U_VERSION_HEADER_DIR}>
             $<INSTALL_INTERFACE:include>
     )
@@ -40,6 +42,8 @@ endif()
 # Namespaced Consumer Alias
 # =============================================================================
 add_library(hf::as5047u ALIAS ${HF_AS5047U_TARGET_NAME})
+# Installed copies export the same name: hf:: + EXPORT_NAME = hf::as5047u (was hf::hf_as5047u).
+set_target_properties(${HF_AS5047U_TARGET_NAME} PROPERTIES EXPORT_NAME as5047u)
 
 #===============================================================================
 # Versioning
@@ -83,6 +87,8 @@ install(TARGETS ${HF_AS5047U_TARGET_NAME} EXPORT hf_as5047uTargets
 install(DIRECTORY inc/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h" PATTERN "*.h.in" EXCLUDE)
 install(FILES "${HF_AS5047U_VERSION_HEADER}" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+# as5047u.hpp includes the template implementation: install it next to the headers.
+install(FILES src/as5047u.ipp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(EXPORT hf_as5047uTargets
     FILE hf_as5047uTargets.cmake

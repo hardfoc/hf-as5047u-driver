@@ -29,7 +29,7 @@ git submodule add https://github.com/hardfoc/hf-as5047u-driver.git external/hf-a
 ## 3. Write the port
 
 The port is the only platform code: one `transfer()` that sends `len` bytes and receives `len` bytes with CSn held
-low. Replace the three `platform_*` calls with your SDK's.
+low, and returns `false` on a bus error. Replace the three `platform_*` calls with your SDK's.
 
 ```cpp title="my_spi.hpp"
 --8<-- "tests/docs/my_spi.hpp:port"

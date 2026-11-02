@@ -8,7 +8,9 @@ static analysis, on every pull request.
 The tests build the real driver against a model of the AS5047U SPI slave
 ([`tests/mock_as5047u.hpp`](../tests/mock_as5047u.hpp)): the frame length selects the format, the reply to a
 command arrives during the next frame, write data frames return the old and then the new content, wrong CRCs set
-ERRFL, and ERRFL clears when read. Every MOSI frame is logged, so tests check the exact bytes on the bus.
+ERRFL, and ERRFL clears when read. Every MOSI frame is logged, so tests check the exact bytes on the bus, and the
+model can fail a transfer, corrupt a reply on MISO or set the reply's warning and error bits on demand, to check
+that bus and reply errors reach the caller.
 
 ```bash
 cmake -S . -B build-host -DHF_AS5047U_BUILD_TESTS=ON
@@ -16,11 +18,17 @@ cmake --build build-host
 ctest --test-dir build-host --output-on-failure
 ```
 
+CTest also runs `hf_as5047u_install_consumer`: it installs the build tree into `build-host/install-test` and builds
+a `find_package(hf_as5047u)` consumer ([`tests/install_consumer/`](../tests/install_consumer/main.cpp)) that
+includes every public header and instantiates the driver, so a header missing from the install or a wrong
+exported target name fails the tests.
+
 | File | Covers |
 | --- | --- |
-| [`tests/test_frames.cpp`](../tests/test_frames.cpp) | CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit |
-| [`tests/test_driver.cpp`](../tests/test_driver.cpp) | Velocity sign and scale, zero position split, ABIRES codes, outputs, direction, filter presets, write verification, sticky flags, angle output source |
-| [`tests/mock_as5047u.hpp`](../tests/mock_as5047u.hpp) | The chip model |
+| [`tests/test_frames.cpp`](../tests/test_frames.cpp) | CRC-8 against an independent implementation for every input; the bytes of 16-, 24- and 32-bit reads; writes promoted to 24 bit; reply CRC checks and the reply warning and error bits |
+| [`tests/test_driver.cpp`](../tests/test_driver.cpp) | Velocity sign and scale, zero position split, ABIRES codes, outputs, direction, filter presets, write verification, sticky flags, angle output source, bus-error propagation, `void` legacy ports |
+| [`tests/test_otp.cpp`](../tests/test_otp.cpp) | `ProgramOTP()` against the datasheet procedure: the register writes of Figure 60, step 15, the guard-band test, failures before and after the burn, the poll timeout, the power-on check |
+| [`tests/mock_as5047u.hpp`](../tests/mock_as5047u.hpp) | The chip model, including the OTP (burn, refresh, guard band, power-on cycle) |
 | [`tests/test_harness.hpp`](../tests/test_harness.hpp) | A dependency-free test registry and `CHECK` macros |
 
 ## Documentation snippets
