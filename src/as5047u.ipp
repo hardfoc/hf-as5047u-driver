@@ -36,17 +36,8 @@ void AS5047U<SpiType>::SetFrameFormat(FrameFormat format) noexcept {
 
 template <typename SpiType>
 uint16_t AS5047U<SpiType>::GetAngle(uint8_t retries) const {
-  uint16_t val = 0;
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-  for (uint8_t i = 0; i <= retries; ++i) {
-    val = this->template ReadReg<AS5047U_REG::ANGLECOM>().bits.ANGLECOM_value;
-    auto err = GetStickyErrorFlags();
-    if ((static_cast<uint16_t>(err) & retryMask) == 0U) {
-      break;
-    }
-  }
-  return val;
+  return decode<AS5047U_REG::ANGLECOM>(readWithRetries(AS5047U_REG::ANGLECOM::ADDRESS, retries))
+      .bits.ANGLECOM_value;
 }
 
 template <typename SpiType>
@@ -75,33 +66,15 @@ float AS5047U<SpiType>::GetAngleRadians(uint8_t retries) const {
 
 template <typename SpiType>
 uint16_t AS5047U<SpiType>::GetRawAngle(uint8_t retries) const {
-  uint16_t val = 0;
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-  for (uint8_t i = 0; i <= retries; ++i) {
-    val = this->template ReadReg<AS5047U_REG::ANGLEUNC>().bits.ANGLEUNC_value;
-    auto err = GetStickyErrorFlags();
-    if ((static_cast<uint16_t>(err) & retryMask) == 0U) {
-      break;
-    }
-  }
-  return val;
+  return decode<AS5047U_REG::ANGLEUNC>(readWithRetries(AS5047U_REG::ANGLEUNC::ADDRESS, retries))
+      .bits.ANGLEUNC_value;
 }
 
 template <typename SpiType>
 int16_t AS5047U<SpiType>::GetVelocity(uint8_t retries) const {
-  int16_t val = 0;
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-  for (uint8_t i = 0; i <= retries; ++i) {
-    auto v = this->template ReadReg<AS5047U_REG::VEL>().bits.VEL_value;
-    val = static_cast<int16_t>((static_cast<int16_t>(v << 2)) >> 2);
-    auto err = GetStickyErrorFlags();
-    if ((static_cast<uint16_t>(err) & retryMask) == 0U) {
-      break;
-    }
-  }
-  return val;
+  const auto v =
+      decode<AS5047U_REG::VEL>(readWithRetries(AS5047U_REG::VEL::ADDRESS, retries)).bits.VEL_value;
+  return static_cast<int16_t>((static_cast<int16_t>(v << 2)) >> 2);
 }
 
 template <typename SpiType>
@@ -137,71 +110,34 @@ float AS5047U<SpiType>::GetVelocityRPM(uint8_t retries) const {
 
 template <typename SpiType>
 uint8_t AS5047U<SpiType>::GetAGC(uint8_t retries) const {
-  uint8_t val = 0;
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-  for (uint8_t i = 0; i <= retries; ++i) {
-    val = this->template ReadReg<AS5047U_REG::AGC>().bits.AGC_value;
-    auto err = GetStickyErrorFlags();
-    if ((static_cast<uint16_t>(err) & retryMask) == 0U) {
-      break;
-    }
-  }
-  return val;
+  return decode<AS5047U_REG::AGC>(readWithRetries(AS5047U_REG::AGC::ADDRESS, retries))
+      .bits.AGC_value;
 }
 
 template <typename SpiType>
 uint16_t AS5047U<SpiType>::GetMagnitude(uint8_t retries) const {
-  uint16_t val = 0;
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-  for (uint8_t i = 0; i <= retries; ++i) {
-    val = this->template ReadReg<AS5047U_REG::MAG>().bits.MAG_value;
-    auto err = GetStickyErrorFlags();
-    if ((static_cast<uint16_t>(err) & retryMask) == 0U) {
-      break;
-    }
-  }
-  return val;
+  return decode<AS5047U_REG::MAG>(readWithRetries(AS5047U_REG::MAG::ADDRESS, retries))
+      .bits.MAG_value;
 }
 
 template <typename SpiType>
 uint16_t AS5047U<SpiType>::GetErrorFlags(uint8_t retries) const {
+  // ERRFL clears when read: a retry would return the flags of the retry, not of the failed read.
+  // readRegister() ORs every ERRFL value into the sticky flags, so nothing is lost either way.
+  (void)retries;
   uint16_t val = 0;
-  for (uint8_t i = 0; i <= retries; ++i) {
-    val = this->template ReadReg<AS5047U_REG::ERRFL>().value;
-    if (val == 0U) {
-      break;
-    }
-  }
+  (void)readRegister(AS5047U_REG::ERRFL::ADDRESS, val);
   return val;
 }
 
 template <typename SpiType>
 uint16_t AS5047U<SpiType>::GetZeroPosition(uint8_t retries) const {
-  uint8_t m = 0;
-  uint8_t l = 0;
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-
-  // First read ZPOSM with retries
-  for (uint8_t i = 0; i <= retries; ++i) {
-    m = this->template ReadReg<AS5047U_REG::ZPOSM>().bits.ZPOSM_bits;
-    auto err = GetStickyErrorFlags();
-    if ((static_cast<uint16_t>(err) & retryMask) == 0U) {
-      break;
-    }
-  }
-
-  // Then read ZPOSL with retries
-  for (uint8_t i = 0; i <= retries; ++i) {
-    l = this->template ReadReg<AS5047U_REG::ZPOSL>().bits.ZPOSL_bits;
-    auto err = GetStickyErrorFlags();
-    if ((static_cast<uint16_t>(err) & retryMask) == 0U) {
-      break;
-    }
-  }
-
+  const uint8_t m =
+      decode<AS5047U_REG::ZPOSM>(readWithRetries(AS5047U_REG::ZPOSM::ADDRESS, retries))
+          .bits.ZPOSM_bits;
+  const uint8_t l =
+      decode<AS5047U_REG::ZPOSL>(readWithRetries(AS5047U_REG::ZPOSL::ADDRESS, retries))
+          .bits.ZPOSL_bits;
   return static_cast<uint16_t>((m << 6) | l);
 }
 
@@ -321,29 +257,15 @@ bool AS5047U<SpiType>::SetFilterPreset(FilterPreset preset, uint8_t retries) {
 
 template <typename SpiType>
 bool AS5047U<SpiType>::GetAdaptiveFilterEnabled(uint8_t retries) const {
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-  auto dis = this->template ReadReg<AS5047U_REG::DISABLE>();
-  for (uint8_t i = 0; i < retries; ++i) {
-    if ((static_cast<uint16_t>(GetStickyErrorFlags()) & retryMask) == 0) {
-      break;
-    }
-    dis = this->template ReadReg<AS5047U_REG::DISABLE>();
-  }
+  const auto dis =
+      decode<AS5047U_REG::DISABLE>(readWithRetries(AS5047U_REG::DISABLE::ADDRESS, retries));
   return (dis.bits.FILTER_disable == 0);
 }
 
 template <typename SpiType>
 std::pair<uint8_t, uint8_t> AS5047U<SpiType>::GetFilterParameters(uint8_t retries) const {
-  constexpr uint16_t retryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
-                                 static_cast<uint16_t>(AS5047U_Error::FramingError);
-  auto s1 = this->template ReadReg<AS5047U_REG::SETTINGS1>();
-  for (uint8_t i = 0; i < retries; ++i) {
-    if ((static_cast<uint16_t>(GetStickyErrorFlags()) & retryMask) == 0) {
-      break;
-    }
-    s1 = this->template ReadReg<AS5047U_REG::SETTINGS1>();
-  }
+  const auto s1 =
+      decode<AS5047U_REG::SETTINGS1>(readWithRetries(AS5047U_REG::SETTINGS1::ADDRESS, retries));
   return {static_cast<uint8_t>(s1.bits.K_min), static_cast<uint8_t>(s1.bits.K_max)};
 }
 
@@ -451,9 +373,13 @@ void AS5047U<SpiType>::updateStickyErrors(uint16_t err_fl) const {
 }
 
 template <typename SpiType>
-AS5047U_Error AS5047U<SpiType>::GetStickyErrorFlags() const {
-  uint16_t val = sticky_errors_.exchange(0);
-  return static_cast<AS5047U_Error>(val);
+AS5047U_Error AS5047U<SpiType>::GetStickyErrorFlags() const noexcept {
+  return static_cast<AS5047U_Error>(sticky_errors_.load());
+}
+
+template <typename SpiType>
+AS5047U_Error AS5047U<SpiType>::ClearStickyErrorFlags() noexcept {
+  return static_cast<AS5047U_Error>(sticky_errors_.exchange(0));
 }
 
 // Public API implementations
@@ -590,13 +516,35 @@ uint16_t AS5047U<SpiType>::rawReadRegister(uint16_t address) const {
   return result;
 }
 
-// High level read that also fetches ERRFL to update sticky errors
+// Register read that also fetches ERRFL (cleared on the chip by that read, datasheet Figure 33) and
+// ORs it into the sticky flags. A read of ERRFL itself is accumulated directly: reading it a second
+// time would return 0 and lose the flags.
+template <typename SpiType>
+uint16_t AS5047U<SpiType>::readRegister(uint16_t address, uint16_t& value) const {
+  value = rawReadRegister(address);
+  const uint16_t err = (address == AS5047U_REG::ERRFL::ADDRESS)
+                           ? value
+                           : rawReadRegister(AS5047U_REG::ERRFL::ADDRESS);
+  updateStickyErrors(err);
+  return err;
+}
+
 template <typename SpiType>
 uint16_t AS5047U<SpiType>::readRegister(uint16_t address) const {
-  uint16_t val = rawReadRegister(address);
-  uint16_t err = rawReadRegister(AS5047U_REG::ERRFL::ADDRESS);
-  updateStickyErrors(err);
-  return val;
+  uint16_t value = 0;
+  (void)readRegister(address, value);
+  return value;
+}
+
+template <typename SpiType>
+uint16_t AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries) const {
+  uint16_t value = 0;
+  for (uint8_t i = 0; i <= retries; ++i) {
+    if ((readRegister(address, value) & kRetryMask) == 0U) {
+      break;
+    }
+  }
+  return value;
 }
 
 template <typename SpiType>
@@ -648,8 +596,7 @@ bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t r
         success = true;
         break;
       }
-      auto errfl = this->template ReadReg<AS5047U_REG::ERRFL>();
-      updateStickyErrors(errfl.value);
+      auto errfl = this->template ReadReg<AS5047U_REG::ERRFL>(); // accumulated into sticky flags
       printf("AS5047U write verify failed: addr=0x%04X expected=0x%04X read_back=0x%04X "
              "ERRFL=0x%04X (CRC_error=%u Framing_error=%u Command_error=%u)\n",
              static_cast<unsigned>(address), static_cast<unsigned>(expected),
@@ -685,8 +632,7 @@ bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t r
         success = true;
         break;
       }
-      auto errfl = this->template ReadReg<AS5047U_REG::ERRFL>();
-      updateStickyErrors(errfl.value);
+      auto errfl = this->template ReadReg<AS5047U_REG::ERRFL>(); // accumulated into sticky flags
       printf("AS5047U write verify failed: addr=0x%04X expected=0x%04X read_back=0x%04X "
              "ERRFL=0x%04X (CRC_error=%u Framing_error=%u Command_error=%u)\n",
              static_cast<unsigned>(address), static_cast<unsigned>(expected),

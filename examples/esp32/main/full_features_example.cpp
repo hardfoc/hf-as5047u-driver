@@ -84,7 +84,7 @@ extern "C" void app_main(void) {
     ESP_LOGI(TAG, "AGC: %u, Magnitude: %u", agc, mag);
 
     // Check for errors
-    AS5047U_Error errors = encoder.GetStickyErrorFlags();
+    AS5047U_Error errors = encoder.ClearStickyErrorFlags(); // report each flag once
     if (errors != AS5047U_Error::None) {
       ESP_LOGW(TAG, "Errors: 0x%04X", static_cast<uint16_t>(errors));
     }

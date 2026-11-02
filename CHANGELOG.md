@@ -12,6 +12,11 @@ All notable changes to this driver are listed here. The format follows
 
 ### Changed
 
+- **Breaking:** `GetStickyErrorFlags()` no longer clears the flags; the new `ClearStickyErrorFlags()` clears them
+  and returns what it cleared. The measurement getters no longer consume the flags to decide on a retry (they use
+  the ERRFL of their own read), so the flags of every sample stay visible until the caller clears them. Datasheet
+  Figure 33: ERRFL clears when read, so the driver's cache is the only copy. Code that relied on a get to clear
+  must call `ClearStickyErrorFlags()` instead.
 - Documentation moved to the HardFOC MkDocs platform: new page set (quickstart, hardware, architecture, SPI
   protocol, OTP programming, API guide, porting, testing), code snippets compiled by the host build from
   `tests/docs/`, Doxygen under `/api/`, versioned with mike. The Jekyll site files and the doxygen-awesome
@@ -19,6 +24,9 @@ All notable changes to this driver are listed here. The format follows
 
 ### Fixed
 
+- Every ERRFL value the driver reads reaches the sticky flags: `GetErrorFlags()` and `ReadReg<ERRFL>()` used to
+  read ERRFL a second time for the sticky update, which returned 0 and dropped the flags (datasheet Figure 33).
+  `GetErrorFlags()` no longer re-reads ERRFL until it reads 0.
 - Every member of `AS5047U<>` compiles on current GCC and Clang: the `template` keyword is no longer used without a
   template argument list, and `GetFilterParameters()` no longer binds bit-fields to references.
 

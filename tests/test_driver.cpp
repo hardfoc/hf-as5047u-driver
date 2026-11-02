@@ -95,16 +95,73 @@ TEST_CASE("A write the chip does not take is reported as false") {
   CHECK(!enc.WriteReg(agc));
 }
 
-TEST_CASE("ERRFL flags seen during ReadReg are kept until GetStickyErrorFlags") {
+TEST_CASE("ERRFL flags seen during ReadReg are kept until ClearStickyErrorFlags") {
   MockAs5047u chip;
   Encoder enc(chip, FrameFormat::SPI_24);
   chip.regs[AS5047U_REG::ERRFL::ADDRESS] = 1U << 0;  // AGC warning
 
   (void)enc.ReadReg<AS5047U_REG::MAG>();
-  const auto first = static_cast<uint16_t>(enc.GetStickyErrorFlags());
-  CHECK_EQ(first, static_cast<uint16_t>(AS5047U_Error::AgcWarning));
-  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), 0U);  // cleared by the first call
-  CHECK_EQ(chip.regs[AS5047U_REG::ERRFL::ADDRESS], 0U);            // and on the chip by the read
+  const auto agc = static_cast<uint16_t>(AS5047U_Error::AgcWarning);
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), agc);
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), agc);   // reading does not clear
+  CHECK_EQ(chip.regs[AS5047U_REG::ERRFL::ADDRESS], 0U);              // the chip's copy is gone
+  CHECK_EQ(static_cast<uint16_t>(enc.ClearStickyErrorFlags()), agc); // returns what it cleared
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), 0U);
+}
+
+TEST_CASE("The measurement getters leave the sticky flags to the caller") {
+  // Datasheet Figure 33: reading ERRFL clears it, so the driver's cache is the only copy left.
+  MockAs5047u chip;
+  Encoder enc(chip, FrameFormat::SPI_24);
+  const auto agc = static_cast<uint16_t>(AS5047U_Error::AgcWarning);
+  const auto half = static_cast<uint16_t>(AS5047U_Error::MagHalf);
+
+  chip.regs[AS5047U_REG::ERRFL::ADDRESS] = 1U << 0;
+  (void)enc.GetAngle();
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), agc);
+
+  chip.regs[AS5047U_REG::ERRFL::ADDRESS] = 1U << 1;
+  (void)enc.GetVelocity();
+  (void)enc.GetAGC();
+  (void)enc.GetMagnitude();
+  (void)enc.GetZeroPosition();
+  (void)enc.GetAdaptiveFilterEnabled();
+  (void)enc.GetFilterParameters();
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), agc | half); // accumulated
+}
+
+TEST_CASE("Every ERRFL value the driver reads reaches the sticky flags") {
+  MockAs5047u chip;
+  Encoder enc(chip, FrameFormat::SPI_24);
+  const auto crc = static_cast<uint16_t>(AS5047U_Error::CrcError);
+
+  chip.regs[AS5047U_REG::ERRFL::ADDRESS] = 1U << 6;
+  CHECK_EQ(enc.GetErrorFlags(), crc);
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), crc);
+  CHECK_EQ(enc.GetErrorFlags(), 0U); // cleared on the chip by the first read
+  (void)enc.ClearStickyErrorFlags();
+
+  chip.regs[AS5047U_REG::ERRFL::ADDRESS] = 1U << 9; // offset compensation not finished
+  CHECK_EQ(enc.ReadReg<AS5047U_REG::ERRFL>().value, 1U << 9);
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()),
+           static_cast<uint16_t>(AS5047U_Error::OffCompError));
+}
+
+TEST_CASE("A getter retries on a CRC error of its own read and keeps the flag") {
+  MockAs5047u chip;
+  Encoder enc(chip, FrameFormat::SPI_24);
+  chip.regs[AS5047U_REG::ANGLECOM::ADDRESS] = 77;
+  chip.regs[AS5047U_REG::ERRFL::ADDRESS] = 1U << 6; // CRC error reported for the first read
+
+  chip.mosi.clear();
+  CHECK_EQ(enc.GetAngle(1), 77);
+  CHECK_EQ(chip.mosi.size(), 8U); // two reads of four frames
+  CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()),
+           static_cast<uint16_t>(AS5047U_Error::CrcError));
+
+  chip.mosi.clear();
+  CHECK_EQ(enc.GetAngle(1), 77); // no error this time: one read
+  CHECK_EQ(chip.mosi.size(), 4U);
 }
 
 TEST_CASE("Angle output source selects what address 0x3FFF returns") {

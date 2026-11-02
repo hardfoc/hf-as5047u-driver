@@ -51,8 +51,9 @@ void diagnostics(Encoder& encoder) {
 
 bool errors(Encoder& encoder) {
   // --8<-- [start:errors]
-  const auto angle = encoder.ReadReg<AS5047U_REG::ANGLECOM>();  // then ERRFL
-  const auto flags = static_cast<uint16_t>(encoder.GetStickyErrorFlags());
+  (void)encoder.ClearStickyErrorFlags();      // start a clean window
+  const uint16_t angle = encoder.GetAngle(2); // then ERRFL; 2 retries on CRC
+  const auto flags = static_cast<uint16_t>(encoder.GetStickyErrorFlags()); // kept until cleared
   if (flags != 0U) {
     if (flags & static_cast<uint16_t>(AS5047U_Error::CrcError)) {
       std::printf("CRC error: check wiring, SPI mode 1, clock\n");
@@ -63,7 +64,7 @@ bool errors(Encoder& encoder) {
     }
     return false;  // do not use this sample
   }
-  std::printf("angle %u\n", static_cast<unsigned>(angle.bits.ANGLECOM_value));
+  std::printf("angle %u\n", static_cast<unsigned>(angle));
   return true;
   // --8<-- [end:errors]
 }

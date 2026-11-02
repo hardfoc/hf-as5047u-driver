@@ -223,10 +223,14 @@ public:
   [[nodiscard]] uint16_t GetMagnitude(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
-   * @brief Read and clear error flags.
-   * @param retries Number of retries on CRC/framing error (default 0 = no
-   * retry).
-   * @return 16-bit error flag register (ERRFL). All flags clear after read.
+   * @brief Read the ERRFL register (0x0001) from the chip.
+   *
+   * The chip clears ERRFL when it is read (datasheet Figure 33), so the value
+   * covers only what happened since the driver's previous read of ERRFL. Every
+   * ERRFL value the driver reads, including this one, is also ORed into the
+   * sticky flags (GetStickyErrorFlags()), so nothing read here is lost.
+   * @param retries Number of retries on a failed read (default 0 = no retry).
+   * @return 16-bit error flag register (ERRFL).
    */
   [[nodiscard]] uint16_t GetErrorFlags(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
@@ -449,10 +453,21 @@ public:
   }
 
   /**
-   * @brief Retrieve and clear the accumulated sticky error flags.
-   * @return Bitwise OR of AS5047U_Error enum flags since last call.
+   * @brief Error flags accumulated since the last ClearStickyErrorFlags().
+   *
+   * ERRFL (0x0001) clears on the chip when it is read (datasheet Figure 33),
+   * and the driver reads it after every register access. Every ERRFL value the
+   * driver reads is ORed into this cache, which only ClearStickyErrorFlags()
+   * clears: reading it, and the driver's own retry decisions, leave it intact.
+   * @return Bitwise OR of AS5047U_Error flags.
    */
-  AS5047U_Error GetStickyErrorFlags() const;
+  [[nodiscard]] AS5047U_Error GetStickyErrorFlags() const noexcept;
+
+  /**
+   * @brief Clear the sticky error flags.
+   * @return The flags that were set, read and cleared in one atomic step.
+   */
+  AS5047U_Error ClearStickyErrorFlags() noexcept;
 
   // ===========================================================================
   // Driver Version
@@ -487,8 +502,18 @@ private:
   //------------------------------------------------------------------
   // Low level register access helpers
   uint16_t rawReadRegister(uint16_t addr) const; ///< read register without updating sticky errors
-  uint16_t readRegister(uint16_t addr) const;    ///< read register and refresh sticky errors
+  /// Read a register, then ERRFL (accumulated into the sticky flags). Returns the ERRFL value
+  /// read for this access (the register's own value when @p addr is ERRFL).
+  uint16_t readRegister(uint16_t addr, uint16_t& value) const;
+  uint16_t readRegister(uint16_t addr) const; ///< value only; errors go to the sticky flags
+  /// Read a register, repeating up to @p retries times while the chip reports a CRC or framing
+  /// error for the access. Never consumes the sticky flags.
+  uint16_t readWithRetries(uint16_t addr, uint8_t retries) const;
   bool writeRegister(uint16_t addr, uint16_t val, uint8_t retries) const;
+
+  /// ERRFL bits that make a getter retry its read.
+  static constexpr uint16_t kRetryMask = static_cast<uint16_t>(AS5047U_Error::CrcError) |
+                                         static_cast<uint16_t>(AS5047U_Error::FramingError);
 
   SpiType& spi_;             ///< SPI bus reference
   FrameFormat frame_format_; ///< current SPI frame format

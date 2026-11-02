@@ -21,7 +21,7 @@ One `AS5047U<SpiType>` object per sensor. It offers three levels of access:
 | --- | --- |
 | Angle | `GetAngle()`, `GetAngle(AngleUnit)`, `GetAngleDegrees()`, `GetAngleRadians()`, `GetRawAngle()` |
 | Velocity | `GetVelocity()`, `GetVelocity(VelocityUnit)`, `GetVelocityDegPerSec()`, `GetVelocityRadPerSec()`, `GetVelocityRPM()` |
-| Field and status | `GetAGC()`, `GetMagnitude()`, `GetDiagnostics()`, `GetErrorFlags()`, `GetStickyErrorFlags()`, `DumpStatus()` |
+| Field and status | `GetAGC()`, `GetMagnitude()`, `GetDiagnostics()`, `GetErrorFlags()`, `GetStickyErrorFlags()`, `ClearStickyErrorFlags()`, `DumpStatus()` |
 | Angle settings | `SetZeroPosition()`, `GetZeroPosition()`, `SetDirection()`, `SetDynamicAngleCompensation()`, `SetAngleOutputSource()` |
 | Filter | `SetFilterPreset()`, `SetAdaptiveFilter()`, `SetFilterParameters()`, `GetFilterParameters()`, `GetAdaptiveFilterEnabled()` |
 | Outputs | `ConfigureInterface()`, `SetABIResolution()`, `SetIndexPulseLength()`, `SetUVWPolePairs()`, `SetHysteresis()` |
@@ -104,19 +104,19 @@ its "Volatile Registers" and "Non-Volatile Registers (OTP)" sections.
 
 ## Handle errors
 
-The chip reports errors in ERRFL (0x0001), which clears when it is read. Every `readRegister()` inside the driver
-reads ERRFL after the register and ORs its bits into a set of **sticky flags**; `GetStickyErrorFlags()` returns
-them and clears them.
+The chip reports errors in ERRFL (0x0001), which clears when it is read (datasheet Figure 33). Every register
+read inside the driver reads ERRFL after the register and ORs its bits into a set of **sticky flags**; so does
+`GetErrorFlags()` and `ReadReg<AS5047U_REG::ERRFL>()`, so no ERRFL value the driver reads is lost.
+`GetStickyErrorFlags()` returns the flags and leaves them set; `ClearStickyErrorFlags()` clears them and returns
+what it cleared, in one atomic step.
 
 ```cpp
 --8<-- "tests/docs/api_tasks.cpp:errors"
 ```
 
-!!! warning "The measurement getters consume the sticky flags"
-    `GetAngle()`, `GetVelocity()`, `GetAGC()`, `GetMagnitude()` and the other retrying getters call
-    `GetStickyErrorFlags()` themselves to decide whether to retry, so the flags of that read are gone when the call
-    returns. To act on the flags of a sample, read it with `ReadReg<>()` as above. `GetErrorFlags()` reads ERRFL
-    from the chip, which only shows what happened since the driver's last read of it.
+The getters decide on a retry from the ERRFL of their own read, so they never consume the sticky flags: the flags
+of every sample stay visible until you clear them. `GetErrorFlags()` returns the chip's ERRFL, which only shows
+what happened since the driver's previous read of it; the sticky flags hold everything since your last clear.
 
 | Flag (`AS5047U_Error`) | ERRFL bit | Meaning | What to do |
 | --- | --- | --- | --- |
