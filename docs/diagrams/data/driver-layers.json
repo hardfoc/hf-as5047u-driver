@@ -1,0 +1,30 @@
+{
+  "registers": [
+    "NOP",
+    "ERRFL",
+    "PROG",
+    "DIA",
+    "AGC",
+    "SINDATA",
+    "COSDATA",
+    "VEL",
+    "MAG",
+    "ANGLEUNC",
+    "ECC_Checksum",
+    "ANGLECOM",
+    "DISABLE",
+    "ZPOSM",
+    "ZPOSL",
+    "SETTINGS1",
+    "SETTINGS2",
+    "SETTINGS3",
+    "ECC"
+  ],
+  "port_hooks": [
+    "transfer"
+  ],
+  "sources": [
+    "inc/as5047u_registers.hpp:register structs",
+    "inc/as5047u_spi_interface.hpp:SpiInterface"
+  ]
+}

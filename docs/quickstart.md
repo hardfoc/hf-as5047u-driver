@@ -1,174 +1,70 @@
-# Quick Start
+# Quickstart
 
-This guide will get you up and running with the AS5047U driver in just a few steps.
+Read an angle from your MCU: wire four SPI signals and the supply, write a one-method port class, call three
+driver functions.
 
-## Prerequisites
+## 1. Wire it
 
-- [Driver installed](installation.md)
-- [Hardware wired](hardware_setup.md)
-- [SPI interface implemented](platform_integration.md)
+| MCU | AS5047U pin | Notes |
+| --- | --- | --- |
+| SPI SCLK | 2 (CLK) | SPI mode 1 (CPOL = 0, CPHA = 1), up to 10 MHz; start at 1 MHz |
+| SPI MOSI | 4 (MOSI) | The chip samples it on the falling clock edge |
+| SPI MISO | 3 (MISO) | High-impedance while CSn is high |
+| GPIO or hardware CS | 1 (CSn) | Active low; one frame per CSn low period |
+| 3.3 V | 11 (VDD) and 12 (VDD3V3), tied | 3.3 V mode, 3.0 V to 3.6 V. For 5 V mode see [Hardware](hardware.md#power) |
+| GND | 13 (GND) and 5 (TEST) | TEST must be grounded |
 
-## Minimal Example
+Put 100 nF from VDD to GND at the pins. Center a diametrically magnetized magnet over the package; the field must
+be 35 mT to 70 mT at the die. The [Hardware](hardware.md) page has every pin, the timing and the 5 V wiring.
 
-Here's a complete working example:
+## 2. Add the driver
 
-```cpp
-#include "as5047u.hpp"
+Add the repository as a submodule and link the `hf_as5047u` CMake target (or add `inc/` to your include path and
+build with C++20). [Installation](installation.md) covers CMake and ESP-IDF.
 
-// 1. Implement the SPI interface
-class MySpi : public as5047u::SpiInterface<MySpi> {
-public:
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) {
-        // Your SPI transfer implementation
-        // Assert CS, transfer data, deassert CS
-    }
-};
-
-// 2. Create instances
-MySpi spi;
-as5047u::AS5047U encoder(spi, FrameFormat::SPI_24); // 24-bit frames with CRC
-
-// 3. Read angle
-float angle_lsb = encoder.GetAngle(as5047u::AngleUnit::Lsb);
-float angle_deg = encoder.GetAngle(as5047u::AngleUnit::Degrees);
-
-// 4. Read velocity
-float vel_lsb = encoder.GetVelocity(as5047u::VelocityUnit::Lsb);
-float vel_dps = encoder.GetVelocity(as5047u::VelocityUnit::DegPerSec);
-
-// 5. Diagnostics
-uint8_t agc = encoder.GetAGC();                  // AGC value (0-255)
-uint16_t mag = encoder.GetMagnitude();           // magnetic magnitude
-uint16_t errors = encoder.GetErrorFlags();       // error flags
+```bash
+git submodule add https://github.com/hardfoc/hf-as5047u-driver.git external/hf-as5047u-driver
 ```
 
-## Step-by-Step Explanation
+## 3. Write the port
 
-### Step 1: Include the Header
+The port is the only platform code: one `transfer()` that sends `len` bytes and receives `len` bytes with CSn held
+low. Replace the three `platform_*` calls with your SDK's.
 
-```cpp
-#include "as5047u.hpp"
+```cpp title="my_spi.hpp"
+--8<-- "tests/docs/my_spi.hpp:port"
 ```
 
-This includes the main driver class and all necessary types.
+[Porting](porting.md) explains the contract and points to the ESP-IDF port the examples use.
 
-### Step 2: Implement the SPI Interface
+## 4. Read the angle
 
-You need to implement the `SpiInterface` for your platform. See [Platform Integration](platform_integration.md) for detailed examples.
-
-```cpp
-class MySpi : public as5047u::SpiInterface<MySpi> {
-public:
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) {
-        // Assert chip select
-        // Perform SPI transfer
-        // Deassert chip select
-    }
-};
+```cpp title="main.cpp"
+--8<-- "tests/docs/quickstart.cpp:quickstart"
 ```
 
-### Step 3: Create Driver Instance
+What each step does:
 
-```cpp
-MySpi spi;
-as5047u::AS5047U encoder(spi, FrameFormat::SPI_24);
-```
+1. The constructor only stores the port and the frame format; it does not talk to the chip. `SPI_24` puts a CRC
+   on every frame.
+2. `GetDiagnostics()` reads the DIA register. `LoopsFinished` is set once the chip's internal loops have settled
+   after power-on (at most 10 ms); `MagHalf_flag` is set when the field is too weak.
+3. `GetAngleDegrees(2)` reads ANGLECOM and repeats the read up to two times if the chip reports a CRC or framing
+   error. `GetVelocityRPM()` and `GetAGC()` read VEL and AGC.
 
-The constructor takes:
-- A reference to your SPI interface implementation
-- The SPI frame format: `SPI_16`, `SPI_24` (with CRC), or `SPI_32` (with CRC)
+This example is built by the host CI, so it compiles against the current headers.
 
-### Step 4: Read Angle
+## If it does not work
 
-```cpp
-float angle = encoder.GetAngle(as5047u::AngleUnit::Lsb);  // 14-bit angle in float form (0-16383)
-```
+| Symptom | First thing to check |
+| --- | --- |
+| `print_angle()` returns `-1`, every register reads 0 | MISO wiring, supply, CSn toggling per frame |
+| Every register reads `0x3FFF` | MISO floating or stuck high; SPI mode (it must be mode 1) |
+| `MagHalf_flag` set, AGC at 255 | Magnet too far or too weak ([Troubleshooting](troubleshooting.md#agc-at-0-or-255)) |
+| Angle jumps or does not follow the shaft | Magnet off-centre or not diametrically magnetized |
 
-Use `AngleUnit` to request the unit you need in one call (`Lsb`, `Degrees`, `Radians`).
+## Next
 
-### Step 5: Request Degrees Directly
-
-```cpp
-float angle_deg = encoder.GetAngle(as5047u::AngleUnit::Degrees);
-```
-
-### Step 6: Read Velocity
-
-```cpp
-float vel_lsb = encoder.GetVelocity(as5047u::VelocityUnit::Lsb);
-float vel_dps = encoder.GetVelocity(as5047u::VelocityUnit::DegPerSec);
-float vel_rpm = encoder.GetVelocity(as5047u::VelocityUnit::Rpm);
-```
-
-### Step 7: Check Diagnostics
-
-```cpp
-uint8_t agc = encoder.GetAGC();        // Automatic Gain Control (0-255)
-uint16_t mag = encoder.GetMagnitude(); // Magnetic field magnitude
-uint16_t errors = encoder.GetErrorFlags(); // Error flags
-```
-
-## Complete Example with Error Handling
-
-```cpp
-#include "as5047u.hpp"
-
-class MySpi : public as5047u::SpiInterface<MySpi> {
-    // ... SPI implementation
-};
-
-void app_main() {
-    MySpi spi;
-    as5047u::AS5047U encoder(spi, FrameFormat::SPI_24);
-    
-    while (true) {
-        // Read angle with retry on CRC errors
-        float angle = encoder.GetAngle(as5047u::AngleUnit::Degrees, 3); // 3 retries
-        
-        // Check for errors
-        AS5047U_Error errors = encoder.GetStickyErrorFlags();
-        if (errors != AS5047U_Error::None) {
-            printf("Error detected: 0x%04X\n", static_cast<uint16_t>(errors));
-        }
-        
-        // Read diagnostics
-        uint8_t agc = encoder.GetAGC();
-        uint16_t mag = encoder.GetMagnitude();
-        
-        printf("Angle: %.2f°, AGC: %u, Mag: %u\n", angle, agc, mag);
-        
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
-```
-
-## Expected Output
-
-When running this example, you should see:
-
-```
-Angle: 8192 (180.00°), AGC: 128, Mag: 8192
-Angle: 8200 (180.18°), AGC: 128, Mag: 8192
-Angle: 8208 (180.35°), AGC: 128, Mag: 8192
-```
-
-## Troubleshooting
-
-If you encounter issues:
-
-- **Compilation errors**: Check that you've implemented the `transfer()` method in your SPI interface
-- **CRC errors**: Verify SPI connections and try increasing retry count
-- **Zero readings**: Check magnet placement and field strength
-- **See**: [Troubleshooting](troubleshooting.md) for common issues
-
-## Next Steps
-
-- Explore [Examples](examples.md) for more advanced usage
-- Review the [API Reference](api_reference.md) for all available methods
-- Check [Configuration](configuration.md) for customization options
-
----
-
-**Navigation**
-⬅️ [Installation](installation.md) | [Next: Hardware Setup ➡️](hardware_setup.md) | [Back to Index](index.md)
-
+- [API guide](api-guide.md): velocity, diagnostics, error flags, outputs, raw registers.
+- [Configuration](configuration.md): settings for commutation and for low-noise positioning.
+- [Examples](examples.md): complete ESP32 applications.
