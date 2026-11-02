@@ -59,6 +59,15 @@ if(HF_AS5047U_ENABLE_WARNINGS)
 endif()
 
 #===============================================================================
+# Host unit tests (model of the chip; no hardware)
+#===============================================================================
+option(HF_AS5047U_BUILD_TESTS "Build the host unit tests in tests/" OFF)
+if(HF_AS5047U_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+#===============================================================================
 # Install and export support (for find_package usage)
 #===============================================================================
 include(GNUInstallDirs)

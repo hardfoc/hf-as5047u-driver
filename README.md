@@ -1,157 +1,98 @@
----
-layout: default
-title: "HardFOC AS5047U Driver"
-description: "Portable C++20 driver for the AS5047U magnetic encoder from ams with SPI interface, CRC protection, DAEC, and DFS™"
-nav_order: 1
-permalink: /
----
+# AS5047U Driver
 
-# HF-AS5047U Driver
+A C++20 driver for the ams OSRAM AS5047U 14-bit magnetic rotary position sensor: read angle, velocity and field
+diagnostics, configure the ABI, UVW and PWM outputs and program the OTP, from any MCU with SPI.
 
-**Portable C++20 driver for the AS5047U magnetic encoder from ams with SPI interface, CRC protection, DAEC, and DFS™**
+[![Host tests](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/ci-host-tests.yml/badge.svg?branch=main)](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/ci-host-tests.yml)
+[![ESP32 examples](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/esp32-examples-build-ci.yml/badge.svg?branch=main)](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/esp32-examples-build-ci.yml)
+[![Docs](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/ci-docs-publish.yml/badge.svg?branch=main)](https://hardfoc.github.io/hf-as5047u-driver/)
+[![License: GPL-3.0](https://img.shields.io/github/license/hardfoc/hf-as5047u-driver)](LICENSE)
 
-[![C++](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![CI](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/esp32-examples-build-ci.yml/badge.svg?branch=main)](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/esp32-examples-build-ci.yml)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://hardfoc.github.io/hf-as5047u-driver/)
+**Documentation: <https://hardfoc.github.io/hf-as5047u-driver/>**
 
-## 📚 Table of Contents
-1. [Overview](#-overview)
-2. [Features](#-features)
-3. [Quick Start](#-quick-start)
-4. [Installation](#-installation)
-5. [API Reference](#-api-reference)
-6. [Examples](#-examples)
-7. [Documentation](#-documentation)
-8. [References](#-references)
-9. [Contributing](#-contributing)
-10. [License](#-license)
+<!-- figure: driver-layers -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/driver-layers.dark.svg">
+  <img src="docs/diagrams/driver-layers.svg"
+    alt="Layer diagram: the application calls the hardware-agnostic AS5047U driver, which reads and writes
+    the chip's typed registers in CRC-protected SPI frames through the SpiInterface base class, which
+    calls the transfer() method of the platform port you write, which drives the SPI bus of the AS5047U.">
+</picture>
+<!-- /figure -->
 
-## 📦 Overview
+## In 30 seconds
 
-> **📖 [📚🌐 Live Complete Documentation](https://hardfoc.github.io/hf-as5047u-driver/)** - 
-> Interactive guides, examples, and step-by-step tutorials
+Write a port class for your MCU (one `transfer()` method;
+[Porting](https://hardfoc.github.io/hf-as5047u-driver/latest/porting/)), then:
 
-**HF-AS5047U** is a portable C++20 driver for the **AS5047U** magnetic encoder from ams. It delivers fast 14‑bit absolute angle readings over SPI, optional CRC protection and advanced features like Dynamic Angle Error Compensation (DAEC) and an adaptive Dynamic Filter System (DFS™). The sensor can also output incremental (A/B/I) and 3‑phase commutation (UVW) signals or a PWM encoded angle, making it a drop‑in replacement for optical encoders in high-performance motor control and robotics.
-
-The driver uses a CRTP-based `SpiInterface` for hardware abstraction, allowing it to run on any platform (ESP32, STM32, Arduino, etc.) with zero runtime overhead. It implements all major features from the AS5047U datasheet including absolute angle readout with/without DAEC, velocity measurement, AGC and magnetic field diagnostics, ABI/UVW/PWM interface configuration, error/status flag handling, and full OTP programming sequence.
-
-![AS5047U magnetic encoder interfaces — SPI / ABI / UVW / PWM](docs/assets/as5047u-interfaces.svg)
-
-## ✨ Features
-
-- ✅ **14-bit absolute angle** with optional CRC check
-- ✅ **DAEC** (Dynamic Angle Error Compensation) for low-latency angle correction
-- ✅ **DFS™** (Dynamic Filter System) adaptive noise filtering
-- ✅ **Stray-field immunity** for robust operation
-- ✅ **Incremental ABI outputs** up to 4096 PPR
-- ✅ **UVW commutation** with programmable pole pairs
-- ✅ **PWM output** option
-- ✅ **Diagnostics** for AGC, magnitude and error flags
-- ✅ **OTP memory** for permanent configuration
-- ✅ **Hardware Agnostic**: SPI interface for platform independence
-- ✅ **Modern C++**: C++20 with CRTP-based design
-- ✅ **Zero Overhead**: CRTP-based design for compile-time polymorphism
-
-## 🚀 Quick Start
-
+<!-- generated: quickstart-code -->
 ```cpp
 #include "as5047u.hpp"
 
-// 1. Implement the SPI interface (see platform_integration.md)
-class MySpi : public as5047u::SpiInterface<MySpi> {
-public:
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) {
-        // Your SPI transfer implementation
-    }
-};
+#include <cstdio>
 
-// 2. Create driver instance
-MySpi spi;
-as5047u::AS5047U encoder(spi, FrameFormat::SPI_24); // 24-bit frames with CRC
+int print_angle(MySpi& spi) {
+  as5047u::AS5047U<MySpi> encoder(spi, FrameFormat::SPI_24);  // CRC on every frame
 
-// 3. Read angle / velocity (unit-selected API)
-float angle_deg = encoder.GetAngle(as5047u::AngleUnit::Degrees);      // 0..360
-float angle_rad = encoder.GetAngle(as5047u::AngleUnit::Radians);      // 0..2π
-float vel_rpm = encoder.GetVelocity(as5047u::VelocityUnit::Rpm);
-float vel_dps = encoder.GetVelocity(as5047u::VelocityUnit::DegPerSec);
+  const auto dia = encoder.GetDiagnostics();         // 1. chip up, magnet in range?
+  if (dia.bits.LoopsFinished == 0U || dia.bits.MagHalf_flag != 0U) {
+    return -1;                                       // no supply, no SPI or no magnet
+  }
 
-// 4. Diagnostics
-uint8_t agc = encoder.GetAGC();            // automatic gain control
-uint16_t mag = encoder.GetMagnitude();     // magnetic magnitude
-uint16_t errors = encoder.GetErrorFlags(); // current error flags
+  const float degrees = encoder.GetAngleDegrees(2);  // 2. angle, 2 retries on CRC
+  const float rpm = encoder.GetVelocityRPM();        // 3. velocity
+  std::printf("%.2f deg  %.1f rpm  AGC %u\n", degrees, rpm, encoder.GetAGC());
+  return 0;
+}
+```
+<!-- /generated -->
+
+## What it does
+
+- Reads the 14-bit angle with or without dynamic angle error compensation, velocity in LSB, °/s, rad/s or rpm,
+  AGC, field magnitude and the diagnostic register.
+- Talks all three SPI frame formats: 16 bit for speed, 24 bit with CRC-8, 32 bit with a PAD byte for daisy chains.
+- Checks every register write by reading it back on the next frame, with optional retries.
+- Configures zero position, direction, adaptive filter, ABI resolution, index width, UVW pole pairs, PWM pin and
+  hysteresis, and burns them to OTP with `ProgramOTP()`.
+- No heap, no exceptions, no RTOS, no virtual calls (the port is a CRTP class).
+
+## Install
+
+```bash
+git submodule add https://github.com/hardfoc/hf-as5047u-driver.git external/hf-as5047u-driver
 ```
 
-For detailed setup, see [Installation](docs/installation.md) and [Quick Start Guide](docs/quickstart.md).
+```cmake
+add_subdirectory(external/hf-as5047u-driver)
+target_link_libraries(my_app PRIVATE hf_as5047u)
+```
 
-## 🔧 Installation
+ESP-IDF: use the component wrapper in [`examples/esp32/components/hf_as5047u`](examples/esp32/components/hf_as5047u/CMakeLists.txt).
+Details: [Installation](https://hardfoc.github.io/hf-as5047u-driver/latest/installation/).
 
-1. **Clone or copy** the driver files into your project
-2. **Implement the SPI interface** for your platform (see [Platform Integration](docs/platform_integration.md))
-3. **Include the header** in your code:
-   ```cpp
-   #include "as5047u.hpp"
-   ```
-4. Compile with a **C++20** or newer compiler
+## Documentation
 
-For detailed installation instructions, see [docs/installation.md](docs/installation.md).
+| | |
+| --- | --- |
+| [Quickstart](https://hardfoc.github.io/hf-as5047u-driver/latest/quickstart/) | Wire it, write the port, read an angle |
+| [Hardware](https://hardfoc.github.io/hf-as5047u-driver/latest/hardware/) | Pins, bus settings, timing, power modes, magnet |
+| [API guide](https://hardfoc.github.io/hf-as5047u-driver/latest/api-guide/) | Read, configure, set up outputs, handle errors |
+| [SPI protocol](https://hardfoc.github.io/hf-as5047u-driver/latest/protocol/) | Frames, CRC, and what each call costs on the bus |
+| [Examples](https://hardfoc.github.io/hf-as5047u-driver/latest/examples/) | ESP32 applications |
+| [API reference](https://hardfoc.github.io/hf-as5047u-driver/latest/api/) | Doxygen, every class and member |
 
-## 📖 API Reference
+The pages are in [`docs/`](docs/index.md); the datasheet is in [`docs/datasheet/`](docs/datasheet/).
 
-| Method | Description |
-|--------|-------------|
-| `GetAngle(AngleUnit)` | Read absolute angle in selected unit (LSB/deg/rad) |
-| `GetVelocity(VelocityUnit)` | Read velocity in selected unit (LSB/deg/s/rad/s/RPM) |
-| `GetAngle()` | Read 14-bit compensated absolute angle |
-| `GetRawAngle()` | Read 14-bit raw absolute angle |
-| `GetVelocity()` | Read signed 14-bit velocity (LSB units) |
-| `GetVelocityDegPerSec()` | Velocity in degrees/sec |
-| `GetVelocityRPM()` | Velocity in revolutions per minute |
-| `GetAGC()` | Read AGC (0–255) value |
-| `GetMagnitude()` | Read magnetic field magnitude |
-| `GetErrorFlags()` | Read and clear error/status flags |
-| `SetZeroPosition()` | Set new zero offset |
-| `SetDirection()` | Set rotation direction (CW or CCW) |
-| `SetABIResolution()` | Set ABI output resolution (10–14 bits) |
-| `SetUVWPolePairs()` | Set UVW pole pairs (1–7) |
-| `ConfigureInterface()` | Enable/disable ABI, UVW, PWM |
-| `SetDynamicAngleCompensation()` | Enable/disable DAEC |
-| `SetAdaptiveFilter()` | Enable/disable adaptive filter (DFS) |
-| `SetFilterPreset()` | Set filter from preset (LowNoise, Balanced, HighBandwidth) |
-| `GetAdaptiveFilterEnabled()` | Read whether adaptive filter is enabled |
-| `GetFilterParameters()` | Read current K_min and K_max register codes |
-| `ProgramOTP()` | Program current settings into OTP |
+## Tests
 
-For complete API documentation, see [docs/api_reference.md](docs/api_reference.md).
+```bash
+cmake -S . -B build-host -DHF_AS5047U_BUILD_TESTS=ON && cmake --build build-host && ctest --test-dir build-host
+```
 
-Compatibility note: the unit-specific helpers (`GetAngleDegrees()`, `GetVelocityRPM()`, etc.) remain available for existing code, but new code should prefer the unit-enum overloads.
+The host tests run the driver against a model of the chip; the code on the documentation site is compiled by the
+same build.
 
-## 📊 Examples
+## License
 
-For ESP32 examples and integration tests, see the [examples/esp32](examples/esp32/) directory.
-
-Detailed example walkthroughs are available in [docs/examples.md](docs/examples.md).
-
-## 📚 Documentation
-
-For complete documentation, see the [docs directory](docs/index.md).
-
-## 🔗 References
-
-| Resource | Link |
-|----------|------|
-| ams AS5047U product page | <https://ams.com/as5047u> |
-| AS5047U datasheet (ams) | <https://ams.com/documents/20143/36005/AS5047U_DS000637_2-00.pdf> |
-| DAEC application note | <https://ams.com/documents/20143/36005/AS5047_AN000288_1-00.pdf> |
-| ESP-IDF SPI master | <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/spi_master.html> |
-| C++20 language reference | <https://en.cppreference.com/w/cpp/20> |
-
-## 🤝 Contributing
-
-Pull requests and suggestions are welcome! Please follow the existing code style and include tests for new features.
-
-## 📄 License
-
-This project is licensed under the **GNU General Public License v3.0**.
-See the [LICENSE](LICENSE) file for details.
-
+GPL-3.0. See [LICENSE](LICENSE).

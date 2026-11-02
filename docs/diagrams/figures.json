@@ -1,0 +1,14 @@
+{
+  "driver-layers": {
+    "title": "Three layers, one of them yours",
+    "alt": "Layer diagram: the application calls the hardware-agnostic AS5047U driver, which reads and writes the chip's typed registers in CRC-protected SPI frames through the SpiInterface base class, which calls the transfer() method of the platform port you write, which drives the SPI bus of the AS5047U.",
+    "description": "From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low. Below it is the hardware.",
+    "profile": "overview",
+    "width": 1200,
+    "source": "docs/diagrams/figures/driver-layers.py",
+    "sources": [
+      "inc/as5047u_registers.hpp:register structs",
+      "inc/as5047u_spi_interface.hpp:SpiInterface"
+    ]
+  }
+}

@@ -1,296 +1,103 @@
----
-layout: default
-title: "⚙️ Configuration"
-description: "Configuration options for the AS5047U driver"
-nav_order: 5
-parent: "📚 Documentation"
-permalink: /docs/configuration/
----
-
 # Configuration
 
-This guide covers all configuration options available for the AS5047U driver.
+Every setting of the AS5047U, the call that changes it, its register and reset value, and two complete setups.
 
-## Compile-Time Configuration
+All settings live in the non-volatile register block (0x0015 to 0x001B). Writes go to the volatile copy and are
+lost at power-off unless you burn them ([OTP programming](otp.md)). A chip that was never programmed starts with
+every register at `0x0000`, which gives the defaults below. Every snippet here is compiled from
+[`tests/docs/configuration.cpp`](../tests/docs/configuration.cpp).
 
-### Kconfig Options
+## Compile-time defaults
 
-If your project uses Kconfig (e.g., ESP-IDF), the following options are available:
+Define these for the whole build (for example `target_compile_definitions(my_app PRIVATE CONFIG_AS5047U_FRAME_24)`,
+or in your `sdkconfig.h`); [`inc/as5047u_config.hpp`](../inc/as5047u_config.hpp) reads them.
 
-```
-AS5047U Configuration
-    AS5047U_FRAME_FORMAT (16/24/32-bit)
-    AS5047U_CRC_RETRIES (default: 0)
-```
+| Define | Effect | Without it |
+| --- | --- | --- |
+| `CONFIG_AS5047U_FRAME_24` | The constructor's default format is `SPI_24` | `SPI_16` |
+| `CONFIG_AS5047U_FRAME_32` | The constructor's default format is `SPI_32` | `SPI_16` |
+| `CONFIG_AS5047U_CRC_RETRIES=n` | Default `retries` argument of every call | `0` |
 
-### Configuration Header
+The repository has no Kconfig file of its own; an ESP-IDF project that wants a menu entry defines these symbols in
+its own `Kconfig.projbuild`.
 
-You can also configure the driver by editing `inc/as5047u_config.hpp`:
+## Settings
 
-```cpp
-namespace AS5047U_CFG {
-    // Default SPI frame format
-    inline constexpr FrameFormat DEFAULT_FRAME_FORMAT = FrameFormat::SPI_24;
-    
-    // Number of CRC retries (0 = no retry)
-    inline constexpr uint8_t CRC_RETRIES = 3;
-}
-```
+| Setting (field) | Call | Reset value |
+| --- | --- | --- |
+| Zero position (`ZPOSM`, `ZPOSL`) | `SetZeroPosition()` | 0 |
+| Direction (`SETTINGS2.DIR`) | `SetDirection()` | Clockwise counts up |
+| DAEC (`SETTINGS2.DAECDIS`) | `SetDynamicAngleCompensation()` | On |
+| What 0x3FFF returns (`SETTINGS2.Data_select`) | `SetAngleOutputSource()` | ANGLECOM |
+| Adaptive filter (`DISABLE.FILTER_disable`) | `SetAdaptiveFilter()` | On |
+| Filter coefficients (`SETTINGS1.K_min`, `K_max`) | `SetFilterPreset()` | K = 2 to 6 |
+| 150 °C in 3.3 V mode (`SETTINGS2.NOISESET`) | `Set150CTemperatureMode()` | Off: up to 125 °C |
+| ABI, UVW, PWM (`DISABLE`, `SETTINGS2`) | `ConfigureInterface()` | PWM off |
+| ABI resolution (`SETTINGS3.ABIRES`) | `SetABIResolution()` | 1024 pulses |
+| Index pulse width (`SETTINGS2.IWIDTH`) | `SetIndexPulseLength()` | 3 LSB |
+| UVW pole pairs (`SETTINGS3.UVWPP`) | `SetUVWPolePairs()` | 1 |
+| ABI hysteresis (`SETTINGS3.HYS`) | `SetHysteresis()` | 1 LSB (0.17°) |
 
-## Runtime Configuration
+DAEC is the dynamic angle error compensation; `SetFilterParameters()` sets the filter codes directly. ABI
+and UVW are on after reset. Directions are seen from the top of the chip. The ABI decimal mode (`SETTINGS2.ABI_DEC`) has no setter; see
+below.
 
-### SPI Frame Format
+### Filter presets
 
-The driver supports three SPI frame formats:
+The adaptive filter picks a coefficient K between K_min and K_max depending on acceleration. Low K is less noise
+and more latency.
 
-```cpp
-// 16-bit frames (no CRC, highest throughput)
-as5047u::AS5047U encoder(spi, FrameFormat::SPI_16);
+| `FilterPreset` | K_min, K_max | Velocity noise (Figure 17) | Corner frequency |
+| --- | --- | --- | --- |
+| `LowNoise` | 0, 0 | 5.8 °/s rms | 48 Hz |
+| `Balanced` | 2, 3 | 8.4 to 19.8 °/s rms | 194 to 387 Hz |
+| `HighBandwidth` | 6, 6 | 244.9 °/s rms | 3095 Hz |
 
-// 24-bit frames (includes 8-bit CRC, recommended)
-as5047u::AS5047U encoder(spi, FrameFormat::SPI_24);
+`SetFilterParameters()` takes the 3-bit register codes, not K: the mapping is not linear (Figure 13: K_min code
+`000` is K = 2, `101` is K = 0; K_max code `000` is K = 6, `110` is K = 0). The presets write the right codes.
 
-// 32-bit frames (includes 8-bit CRC + 8-bit pad for daisy-chain)
-as5047u::AS5047U encoder(spi, FrameFormat::SPI_32);
-```
+### ABI resolution
 
-**Recommendation**: Use `SPI_24` for most applications - it provides CRC protection with good throughput.
+| `SetABIResolution()` | Steps per turn | Pulses per turn | ABIRES |
+| --- | --- | --- | --- |
+| 14 | 16384 | 4096 | `100` |
+| 13 | 8192 | 2048 | `011` |
+| 12 (default) | 4096 | 1024 | `000` |
+| 11 | 2048 | 512 | `001` |
+| 10 | 1024 | 256 | `010` |
 
-**SPI read/write protocol (AS5047U datasheet):**  
-- **Read:** Send a read command (address with R=1), then a NOP. The **NOP response** on MISO is the data for the requested register.  
-- **Write:** Send write command (address), then write data, then NOP. The **NOP response** on MISO is the new content of the written register; the driver uses this to verify the write.  
-- 24-bit and 32-bit MISO frames follow datasheet Fig. 25 / Fig. 28: high bits = ER, Error; bits 21:8 (24-bit) or 29:16 (32-bit) = 14-bit data; low byte(s) = CRC (and PAD in 32-bit).
+With `ABI_DEC` = 1 the same codes give decimal counts from 1000 down to 25 pulses per turn; set it with
+`WriteReg()` ([API guide](api-guide.md#use-any-register-directly)).
 
-### Change Frame Format at Runtime
+### Interface combinations
 
-```cpp
-encoder.SetFrameFormat(FrameFormat::SPI_24);
-```
+`ConfigureInterface(abi, uvw, pwm)`:
 
-## Sensor Configuration
+| `abi` | `uvw` | `pwm` | Outputs |
+| --- | --- | --- | --- |
+| true | false | false | A, B, I |
+| true | false | true | A, B, I; PWM on W |
+| false | true | false | U, V, W |
+| false | true | true | U, V, W; PWM on I |
+| true | true | any | A, B, I and U, V, W; `UVW_ABI` = 0, so PWM (if set) takes the W pin |
+| false | false | true | PWM on W |
+| false | false | false | ABI and UVW tristated |
 
-### Zero Position
+## Setups
 
-Set the zero reference position (soft offset). Per the AS5047U datasheet, ZPOSM/ZPOSL and all non-volatile registers support **soft write**: SPI write/read is possible multiple times, and the content persists until a **hardware reset** (power cycle). No OTP burn is required for runtime zero position or direction changes.
-
-```cpp
-// Set zero position to current angle
-uint16_t current_angle = encoder.GetAngle();
-encoder.SetZeroPosition(current_angle);
-
-// Or set a specific value (0-16383)
-encoder.SetZeroPosition(8192);  // 180 degrees
-```
-
-### Rotation Direction
-
-```cpp
-// Clockwise rotation yields increasing angle (default)
-encoder.SetDirection(true);
-
-// Counter-clockwise rotation yields increasing angle
-encoder.SetDirection(false);
-```
-
-### Dynamic Angle Error Compensation (DAEC)
-
-DAEC provides low-latency angle correction for high-speed applications:
-
-```cpp
-// Enable DAEC (recommended for high-speed applications)
-encoder.SetDynamicAngleCompensation(true);
-
-// Disable DAEC (use raw angle)
-encoder.SetDynamicAngleCompensation(false);
-```
-
-### Adaptive Filter (DFS™)
-
-The Dynamic Filter System (DFS) adaptively filters angle and velocity noise. Higher K = more bandwidth and faster response but more standstill noise (see datasheet Figure 17).
-
-**Easiest: use a preset (recommended)**
+### Motor commutation and speed control
 
 ```cpp
-#include "as5047u_types.hpp"  // for FilterPreset
-
-// One call: enables filter and sets K to match the preset
-encoder.SetFilterPreset(FilterPreset::LowNoise);     // ~5.8 °/s RMS at standstill, best for low speed
-encoder.SetFilterPreset(FilterPreset::Balanced);     // ~8–20 °/s, good default
-encoder.SetFilterPreset(FilterPreset::HighBandwidth); // ~245 °/s, use when speed matters most
+--8<-- "tests/docs/configuration.cpp:commutation"
 ```
 
-**Advanced: enable/disable and raw K codes**
+### Slow or static positioning
 
 ```cpp
-// Enable or disable the filter
-encoder.SetAdaptiveFilter(true);
-
-// Set K_min and K_max as 3-bit register codes (0–7). See SETTINGS1::AdaptiveFilterKmin/Kmax
-// for mapping to effective K (datasheet Figure 17).
-encoder.SetFilterParameters(k_min_code, k_max_code);
-
-// Read back current state
-bool enabled = encoder.GetAdaptiveFilterEnabled();
-auto [k_min, k_max] = encoder.GetFilterParameters();
+--8<-- "tests/docs/configuration.cpp:positioning"
 ```
 
-### Angle Output Source
+The datasheet recommends turning DAEC off under about 100 rpm: it removes 0.016° rms of noise and the latency it
+compensates does not matter at low speed.
 
-Select which angle is used for outputs (ABI, UVW, PWM):
-
-```cpp
-// Use compensated angle (with DAEC)
-encoder.SetAngleOutputSource(AS5047U_REG::SETTINGS2::AngleOutputSource::Compensated);
-
-// Use raw angle (without DAEC)
-encoder.SetAngleOutputSource(AS5047U_REG::SETTINGS2::AngleOutputSource::Raw);
-```
-
-## Output Configuration
-
-### ABI (Incremental Encoder) Output
-
-Configure incremental encoder outputs (A, B, I):
-
-```cpp
-// Set resolution (10-14 bits)
-encoder.SetABIResolution(12);  // 12-bit = 4096 PPR
-
-// Set index pulse length (1 or 3 LSB periods)
-encoder.SetIndexPulseLength(1);
-
-// Enable ABI output
-encoder.ConfigureInterface(true, false, false);  // ABI only
-```
-
-### UVW (Commutation) Output
-
-Configure 3-phase commutation outputs:
-
-```cpp
-// Set number of pole pairs (1-7)
-encoder.SetUVWPolePairs(5);  // 5 pole pairs
-
-// Enable UVW output
-encoder.ConfigureInterface(false, true, false);  // UVW only
-```
-
-### PWM Output
-
-Configure PWM-encoded angle output:
-
-```cpp
-// Enable PWM output
-// PWM appears on W pin if ABI enabled, or I pin if UVW enabled
-encoder.ConfigureInterface(true, false, true);  // ABI + PWM
-```
-
-### Combined Outputs
-
-```cpp
-// Enable both ABI and UVW (PWM not available in this mode)
-encoder.ConfigureInterface(true, true, false);
-
-// Enable ABI with PWM on W pin
-encoder.ConfigureInterface(true, false, true);
-```
-
-## Advanced Configuration
-
-### Hysteresis
-
-Set incremental output hysteresis to reduce jitter:
-
-```cpp
-// Set hysteresis level
-encoder.SetHysteresis(AS5047U_REG::SETTINGS3::Hysteresis::LSB_1);
-```
-
-### High-Temperature Mode
-
-Enable 150°C operation mode:
-
-```cpp
-encoder.Set150CTemperatureMode(true);
-```
-
-### OTP Programming
-
-Program current settings into OTP (One-Time Programmable) memory for permanent configuration:
-
-```cpp
-// Configure all settings first
-encoder.SetZeroPosition(0);
-encoder.SetDirection(true);
-encoder.SetABIResolution(12);
-// ... other settings
-
-// Program to OTP (one-time operation, cannot be undone)
-bool success = encoder.ProgramOTP();
-if (success) {
-    // Settings are now permanent
-}
-```
-
-**Warning**: OTP programming is **irreversible**. Make sure all settings are correct before programming.
-
-## CRC Retry Configuration
-
-Configure automatic retry on CRC errors:
-
-```cpp
-// Read with automatic retry (3 attempts)
-uint16_t angle = encoder.GetAngle(3);
-
-// Or set default retries in config
-// AS5047U_CFG::CRC_RETRIES = 3;
-```
-
-## Default Values
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `DEFAULT_FRAME_FORMAT` | `SPI_16` | SPI frame format |
-| `CRC_RETRIES` | `0` | Number of CRC retries |
-| Zero Position | `0` | Zero reference angle |
-| Direction | `true` (CW) | Rotation direction |
-| DAEC | `enabled` | Dynamic angle compensation |
-| Adaptive Filter | `enabled` | DFS adaptive filtering |
-| ABI Resolution | `14-bit` | Incremental output resolution |
-| UVW Pole Pairs | `1` | Commutation pole pairs |
-
-## Recommended Settings
-
-### For High-Speed Motor Control
-
-```cpp
-encoder.SetDynamicAngleCompensation(true);   // Enable DAEC
-encoder.SetFilterPreset(FilterPreset::Balanced);  // or HighBandwidth for max speed
-encoder.SetABIResolution(12);                // 4096 PPR
-encoder.ConfigureInterface(true, false, false);  // ABI output
-```
-
-### For Low-Noise Applications
-
-```cpp
-encoder.SetFilterPreset(FilterPreset::LowNoise);
-encoder.SetHysteresis(AS5047U_REG::SETTINGS3::Hysteresis::LSB_2);
-```
-
-### For Basic Angle Reading
-
-```cpp
-// Use default settings, just read angle
-uint16_t angle = encoder.GetAngle();
-```
-
-## Next Steps
-
-- See [Examples](examples.md) for configuration examples
-- Review [API Reference](api_reference.md) for all configuration methods
-
----
-
-**Navigation**
-⬅️ [Platform Integration](platform_integration.md) | [Next: API Reference ➡️](api_reference.md) | [Back to Index](index.md)
-
+Next: [OTP programming](otp.md) to make a setup permanent.
