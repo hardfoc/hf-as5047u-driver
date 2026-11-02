@@ -1,12 +1,3 @@
----
-layout: default
-title: "🔌 Hardware Setup"
-description: "Hardware wiring and connection guide for AS5047U magnetic encoder"
-nav_order: 3
-parent: "📚 Documentation"
-permalink: /docs/hardware_setup/
----
-
 # Hardware Setup
 
 ![AS5047U interfaces — SPI / ABI / UVW / PWM](assets/as5047u-interfaces.svg)

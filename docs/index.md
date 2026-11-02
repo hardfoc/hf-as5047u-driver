@@ -1,18 +1,8 @@
----
-layout: default
-title: "📚 Documentation"
-description: "Complete documentation for the HardFOC AS5047U Driver"
-nav_order: 2
-parent: "HardFOC AS5047U Driver"
-permalink: /docs/
-has_children: true
----
-
 # HF-AS5047U Documentation
 
 Welcome! This directory contains step-by-step guides for installing, building, and using the **HF-AS5047U** library.
 
-## 📚 Documentation Structure
+## Documentation Structure
 
 ### **Getting Started**
 
@@ -36,7 +26,7 @@ Welcome! This directory contains step-by-step guides for installing, building, a
 
 ---
 
-## 🚀 Quick Start Path
+## Quick Start Path
 
 **New to AS5047U?** Follow this recommended path:
 
@@ -48,7 +38,7 @@ Welcome! This directory contains step-by-step guides for installing, building, a
 
 ---
 
-## 💡 Need Help?
+## Need Help?
 
 - **🐛 Found a bug?** Check the [Troubleshooting](troubleshooting.md) guide
 - **❓ Have questions?** Review the [API Reference](api_reference.md)

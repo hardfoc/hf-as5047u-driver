@@ -1,11 +1,3 @@
----
-layout: default
-title: "HardFOC AS5047U Driver"
-description: "Portable C++20 driver for the AS5047U magnetic encoder from ams with SPI interface, CRC protection, DAEC, and DFS™"
-nav_order: 1
-permalink: /
----
-
 # HF-AS5047U Driver
 
 **Portable C++20 driver for the AS5047U magnetic encoder from ams with SPI interface, CRC protection, DAEC, and DFS™**
@@ -15,19 +7,19 @@ permalink: /
 [![CI](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/esp32-examples-build-ci.yml/badge.svg?branch=main)](https://github.com/hardfoc/hf-as5047u-driver/actions/workflows/esp32-examples-build-ci.yml)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://hardfoc.github.io/hf-as5047u-driver/)
 
-## 📚 Table of Contents
-1. [Overview](#-overview)
-2. [Features](#-features)
-3. [Quick Start](#-quick-start)
-4. [Installation](#-installation)
-5. [API Reference](#-api-reference)
-6. [Examples](#-examples)
-7. [Documentation](#-documentation)
-8. [References](#-references)
-9. [Contributing](#-contributing)
-10. [License](#-license)
+## Table of Contents
+1. [Overview](#overview)
+2. [Features](#features)
+3. [Quick Start](#quick-start)
+4. [Installation](#installation)
+5. [API Reference](#api-reference)
+6. [Examples](#examples)
+7. [Documentation](#documentation)
+8. [References](#references)
+9. [Contributing](#contributing)
+10. [License](#license)
 
-## 📦 Overview
+## Overview
 
 > **📖 [📚🌐 Live Complete Documentation](https://hardfoc.github.io/hf-as5047u-driver/)** - 
 > Interactive guides, examples, and step-by-step tutorials
@@ -38,7 +30,7 @@ The driver uses a CRTP-based `SpiInterface` for hardware abstraction, allowing i
 
 ![AS5047U magnetic encoder interfaces — SPI / ABI / UVW / PWM](docs/assets/as5047u-interfaces.svg)
 
-## ✨ Features
+## Features
 
 - ✅ **14-bit absolute angle** with optional CRC check
 - ✅ **DAEC** (Dynamic Angle Error Compensation) for low-latency angle correction
@@ -53,7 +45,7 @@ The driver uses a CRTP-based `SpiInterface` for hardware abstraction, allowing i
 - ✅ **Modern C++**: C++20 with CRTP-based design
 - ✅ **Zero Overhead**: CRTP-based design for compile-time polymorphism
 
-## 🚀 Quick Start
+## Quick Start
 
 ```cpp
 #include "as5047u.hpp"
@@ -84,7 +76,7 @@ uint16_t errors = encoder.GetErrorFlags(); // current error flags
 
 For detailed setup, see [Installation](docs/installation.md) and [Quick Start Guide](docs/quickstart.md).
 
-## 🔧 Installation
+## Installation
 
 1. **Clone or copy** the driver files into your project
 2. **Implement the SPI interface** for your platform (see [Platform Integration](docs/platform_integration.md))
@@ -96,7 +88,7 @@ For detailed setup, see [Installation](docs/installation.md) and [Quick Start Gu
 
 For detailed installation instructions, see [docs/installation.md](docs/installation.md).
 
-## 📖 API Reference
+## API Reference
 
 | Method | Description |
 |--------|-------------|
@@ -126,17 +118,17 @@ For complete API documentation, see [docs/api_reference.md](docs/api_reference.m
 
 Compatibility note: the unit-specific helpers (`GetAngleDegrees()`, `GetVelocityRPM()`, etc.) remain available for existing code, but new code should prefer the unit-enum overloads.
 
-## 📊 Examples
+## Examples
 
 For ESP32 examples and integration tests, see the [examples/esp32](examples/esp32/) directory.
 
 Detailed example walkthroughs are available in [docs/examples.md](docs/examples.md).
 
-## 📚 Documentation
+## Documentation
 
 For complete documentation, see the [docs directory](docs/index.md).
 
-## 🔗 References
+## References
 
 | Resource | Link |
 |----------|------|
@@ -146,11 +138,11 @@ For complete documentation, see the [docs directory](docs/index.md).
 | ESP-IDF SPI master | <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/spi_master.html> |
 | C++20 language reference | <https://en.cppreference.com/w/cpp/20> |
 
-## 🤝 Contributing
+## Contributing
 
 Pull requests and suggestions are welcome! Please follow the existing code style and include tests for new features.
 
-## 📄 License
+## License
 
 This project is licensed under the **GNU General Public License v3.0**.
 See the [LICENSE](LICENSE) file for details.

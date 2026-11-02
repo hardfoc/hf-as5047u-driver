@@ -2,7 +2,7 @@
 
 This directory contains comprehensive examples demonstrating the AS5047U driver on ESP32-S3 (configured like the PCAL95555 driver examples).
 
-## 🎯 Overview
+## Overview
 
 The ESP32-S3 examples showcase real-world usage of the AS5047U magnetic encoder with:
 
@@ -12,7 +12,7 @@ The ESP32-S3 examples showcase real-world usage of the AS5047U magnetic encoder 
 - **Comprehensive documentation** for each example
 - **Production-ready code** with proper error handling
 
-## 🔧 Hardware Requirements
+## Hardware Requirements
 
 ### ESP32-S3 Development Board
 - ESP32-S3-DevKitC-1 or compatible
@@ -31,7 +31,7 @@ The ESP32-S3 examples showcase real-world usage of the AS5047U magnetic encoder 
 
 **Note:** The default SPI configuration uses mode 1 (CPOL=0, CPHA=1) at 1MHz. Pin assignments are defined in `main/esp32_as5047u_test_config.hpp` and can be changed there.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Prerequisites
 
@@ -68,9 +68,9 @@ cd hf-as5047u-driver/examples/esp32
 idf.py monitor
 ```
 
-## 📱 Available Examples
+## Available Examples
 
-### 🟢 Test Suite
+### Test Suite
 
 #### `driver_integration_test`
 **Comprehensive Driver Integration Test Suite**
@@ -89,7 +89,7 @@ idf.py monitor
 ./scripts/build_app.sh driver_integration_test Release
 ```
 
-### 🟡 Basic Examples
+### Basic Examples
 
 #### `basic_angle_reading`
 **Basic Angle Reading Example**
@@ -142,7 +142,7 @@ idf.py monitor
 ./scripts/build_app.sh full_features Release
 ```
 
-## 🔨 Building Examples
+## Building Examples
 
 ### Using Build Scripts (Recommended)
 
@@ -171,7 +171,7 @@ idf.py flash
 idf.py monitor
 ```
 
-## 📊 Test Framework
+## Test Framework
 
 All test examples use a standardized test framework with:
 
@@ -188,7 +188,7 @@ All test examples use a standardized test framework with:
 - `RUN_TEST_SECTION_IF_ENABLED(enabled, section_name, ...)` - Conditional test sections
 - `g_test_results` - Global test results tracking
 
-## 🔌 Hardware Configuration
+## Hardware Configuration
 
 ### SPI Configuration
 
@@ -219,7 +219,7 @@ The AS5047U supports three SPI frame formats:
 - **SPI_24** - 24-bit frames (includes 8-bit CRC for reliability) - **Recommended**
 - **SPI_32** - 32-bit frames (includes 8-bit CRC and 8-bit pad for daisy-chain)
 
-## 📚 Documentation
+## Documentation
 
 For more detailed documentation, see:
 
@@ -231,7 +231,7 @@ For more detailed documentation, see:
 - [Examples Guide](../../docs/examples.md)
 - [API Reference](../../docs/api_reference.md)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Build Issues
 
@@ -268,11 +268,11 @@ For more detailed documentation, see:
 - Ensure proper power supply (3.3V)
 - Check for SPI bus conflicts
 
-## 📝 License
+## License
 
 See the main driver [LICENSE](../../LICENSE) file.
 
-## 🤝 Contributing
+## Contributing
 
 See the main driver [Contributing Guide](../../docs/index.md).
 
