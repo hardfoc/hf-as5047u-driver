@@ -38,7 +38,7 @@ TEST_CASE("24-bit read: command, NOP, then ERRFL and NOP, each with its CRC") {
   chip.regs[AS5047U_REG::ANGLECOM::ADDRESS] = 0x1234;
   Encoder enc(chip, FrameFormat::SPI_24);
 
-  CHECK_EQ(enc.GetAngle(), 0x1234);
+  CHECK_EQ(enc.GetAngle().value, 0x1234);
   REQUIRE(chip.mosi.size() == 4U);
   CHECK_EQ(chip.framesOfLength(3), 4U);
   // Read ANGLECOM: bit 22 = 1 (read), address 0x3FFF, CRC over bits 23:8.
@@ -58,11 +58,11 @@ TEST_CASE("16-bit read: two-byte frames, no CRC") {
   chip.regs[AS5047U_REG::ANGLECOM::ADDRESS] = 8192;
   Encoder enc(chip, FrameFormat::SPI_16);
 
-  CHECK_EQ(enc.GetAngle(), 8192);
+  CHECK_EQ(enc.GetAngle().value, 8192);
   CHECK_EQ(chip.framesOfLength(2), 4U);
   CHECK_EQ(chip.mosi[0][0], 0x7F);
   CHECK_EQ(chip.mosi[0][1], 0xFF);
-  const float deg = enc.GetAngleDegrees();
+  const float deg = enc.GetAngleDegrees().value;
   CHECK(deg > 179.99F && deg < 180.01F);
 }
 
@@ -72,7 +72,7 @@ TEST_CASE("32-bit read: the PAD byte leads every MOSI frame") {
   Encoder enc(chip, FrameFormat::SPI_32);
   enc.SetPad(0xA5);
 
-  CHECK_EQ(enc.GetMagnitude(), 4800);
+  CHECK_EQ(enc.GetMagnitude().value, 4800);
   CHECK_EQ(chip.framesOfLength(4), 4U);
   for (const auto& f : chip.mosi) {
     CHECK_EQ(f[0], 0xA5);
@@ -104,7 +104,7 @@ TEST_CASE("24-bit read: a reply with a wrong CRC is rejected and retried") {
   Encoder enc(chip, FrameFormat::SPI_24);
 
   chip.corrupt_reply_at = 1; // the NOP reply that carries ANGLECOM
-  CHECK_EQ(enc.GetAngle(1), 0x1234);
+  CHECK_EQ(enc.GetAngle(1).value, 0x1234);
   CHECK_EQ(chip.transfers, 6U); // 2 frames rejected at the bad reply, then a full read of 4
   CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()),
            static_cast<uint16_t>(AS5047U_Error::ReplyCrcError));
@@ -122,11 +122,13 @@ TEST_CASE("32-bit read: the reply CRC covers bits 31:16, not the PAD") {
   Encoder enc(chip, FrameFormat::SPI_32);
   enc.SetPad(0x5A);
 
-  CHECK_EQ(enc.GetMagnitude(), 4800);
+  CHECK_EQ(enc.GetMagnitude().value, 4800);
   CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()), 0U); // PAD does not upset the CRC
 
   chip.corrupt_reply_at = static_cast<long>(chip.transfers) + 1;
-  CHECK_EQ(enc.GetMagnitude(), 0U);
+  const auto corrupted = enc.GetMagnitude();
+  CHECK(corrupted.error == AS5047U_Error::ReplyCrcError);
+  CHECK_EQ(corrupted.value, 0U);
   CHECK_EQ(static_cast<uint16_t>(enc.GetStickyErrorFlags()),
            static_cast<uint16_t>(AS5047U_Error::ReplyCrcError));
 }
@@ -158,11 +160,11 @@ TEST_CASE("The warning and error bits of the reply reach the sticky flags") {
     Encoder enc(chip, format);
 
     chip.reply_flags = 0x8000;
-    CHECK_EQ(enc.GetAngle(), 0x2AAA); // the data is still good; the bits are not data
+    CHECK_EQ(enc.GetAngle().value, 0x2AAA); // the data is still good; the bits are not data
     CHECK_EQ(static_cast<uint16_t>(enc.ClearStickyErrorFlags()), warn);
 
     chip.reply_flags = 0x4000;
-    CHECK_EQ(enc.GetAngle(), 0x2AAA);
+    CHECK_EQ(enc.GetAngle().value, 0x2AAA);
     CHECK_EQ(static_cast<uint16_t>(enc.ClearStickyErrorFlags()), err);
 
     chip.reply_flags = 0;

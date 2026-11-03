@@ -78,6 +78,32 @@ struct OtpResult {
 /// toolchain.
 inline constexpr float kPi = 3.14159265358979323846F;
 
+/**
+ * @brief Value of a getter together with the error of the read that produced it.
+ *
+ * Every value getter returns one. On success @ref error is AS5047U_Error::None and
+ * @ref value holds the reading. On failure @ref error says why (BusError, ReplyCrcError, or the
+ * CrcError / FramingError the chip reported in ERRFL for the access) and @ref value is
+ * value-initialised (0): it is not a reading and must not be used. The cause is also in the
+ * sticky flags (AS5047U::GetStickyErrorFlags()).
+ *
+ * @tparam T Type of the reading.
+ */
+template <typename T>
+struct [[nodiscard]] Result {
+  T value{};                                 ///< The reading; meaningful only when ok()
+  AS5047U_Error error = AS5047U_Error::None; ///< None on success, else the cause of the failure
+
+  /// True when the read succeeded and @ref value is a reading.
+  [[nodiscard]] constexpr bool ok() const noexcept {
+    return error == AS5047U_Error::None;
+  }
+  /// Same as ok().
+  constexpr explicit operator bool() const noexcept {
+    return ok();
+  }
+};
+
 /** @brief Units for angle-returning APIs. */
 enum class AngleUnit : uint8_t {
   Lsb,
@@ -140,6 +166,8 @@ public:
   //------------------------------------------------------------------
   // High-level API
   //------------------------------------------------------------------
+  // Every value getter returns Result<T>: check ok() (or the error) before
+  // using value. A failed read never comes back as a plain 0 or an old value.
   /**
    * @brief Set the SPI frame format (16, 24, or 32-bit).
    * @param format The desired SPI frame format.
@@ -151,54 +179,54 @@ public:
    * active).
    *  @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
-   *  @return The current angle in LSB (0-16383).
+   *  @return Result: the current angle in LSB (0-16383).
    */
-  [[nodiscard]] uint16_t GetAngle(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<uint16_t> GetAngle(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /** @brief Read absolute angle in caller-selected unit.
    *  @param unit Output unit (LSB / degrees / radians).
    *  @param retries Number of retries on CRC/framing error (default 0 = no retry).
-   *  @return Angle value in the requested unit.
+   *  @return Result: angle value in the requested unit (error set on a failed read).
    */
-  [[nodiscard]] float GetAngle(AngleUnit unit,
-                               uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<float> GetAngle(AngleUnit unit,
+                                       uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /** @brief Read absolute angle in degrees.
    *  @param retries Number of retries on CRC/framing error (default 0 = no retry).
-   *  @return Angle in degrees in the range [0, 360).
+   *  @return Result: angle in degrees in the range [0, 360).
    */
-  [[nodiscard]] float GetAngleDegrees(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<float> GetAngleDegrees(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /** @brief Read absolute angle in radians.
    *  @param retries Number of retries on CRC/framing error (default 0 = no retry).
-   *  @return Angle in radians in the range [0, 2π).
+   *  @return Result: angle in radians in the range [0, 2π).
    */
-  [[nodiscard]] float GetAngleRadians(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<float> GetAngleRadians(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Read the 14-bit absolute angle without dynamic compensation (raw
    * angle).
    *  @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
-   *  @return The current raw angle in LSB (0-16383).
+   *  @return Result: the current raw angle in LSB (0-16383).
    */
-  [[nodiscard]] uint16_t GetRawAngle(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<uint16_t> GetRawAngle(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Read the current rotational velocity (signed 14-bit).
    *  @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
-   *  @return The current velocity in LSB (signed 14-bit).
+   *  @return Result: the current velocity in LSB (signed 14-bit).
    */
-  [[nodiscard]] int16_t GetVelocity(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<int16_t> GetVelocity(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /** @brief Read rotational velocity in caller-selected unit.
    *  @param unit Output unit (LSB / deg/s / rad/s / RPM).
    *  @param retries Number of retries on CRC/framing error (default 0 = no retry).
-   *  @return Velocity in the requested unit.
+   *  @return Result: velocity in the requested unit (error set on a failed read).
    */
-  [[nodiscard]] float GetVelocity(VelocityUnit unit,
-                                  uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<float> GetVelocity(VelocityUnit unit,
+                                          uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /** @brief Angle conversion helpers. */
   struct Angle {
@@ -225,33 +253,35 @@ public:
    *  @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
    */
-  [[nodiscard]] float GetVelocityDegPerSec(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<float> GetVelocityDegPerSec(
+      uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
   /** @brief Get rotational velocity in radians per second.
    *  @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
    */
-  [[nodiscard]] float GetVelocityRadPerSec(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<float> GetVelocityRadPerSec(
+      uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
   /** @brief Get rotational velocity in revolutions per minute.
    *  @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
    */
-  [[nodiscard]] float GetVelocityRPM(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<float> GetVelocityRPM(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Read the current Automatic Gain Control (AGC) value (0-255).
    * @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
-   * @return The current AGC value.
+   * @return Result: the current AGC value (error set on a failed read).
    */
-  [[nodiscard]] uint8_t GetAGC(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<uint8_t> GetAGC(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Read the current magnetic field magnitude (14-bit value).
    * @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
-   * @return The current magnetic field magnitude in LSB (0-16383).
+   * @return Result: the current magnetic field magnitude in LSB (0-16383).
    */
-  [[nodiscard]] uint16_t GetMagnitude(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<uint16_t> GetMagnitude(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Read the ERRFL register (0x0001) from the chip.
@@ -261,9 +291,10 @@ public:
    * ERRFL value the driver reads, including this one, is also ORed into the
    * sticky flags (GetStickyErrorFlags()), so nothing read here is lost.
    * @param retries Number of retries on a failed read (default 0 = no retry).
-   * @return 16-bit error flag register (ERRFL).
+   * @return Result: in value, the OR of every ERRFL value read; error set only when no attempt
+   * succeeded (the bus or the reply failed every time).
    */
-  [[nodiscard]] uint16_t GetErrorFlags(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<uint16_t> GetErrorFlags(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Dump formatted status and diagnostics using printf
@@ -274,9 +305,9 @@ public:
    * @brief Get the currently configured soft zero position offset (14-bit).
    * @param retries Number of retries on CRC/framing error (default 0 = no
    * retry).
-   * @return The current zero position in LSB (0-16383).
+   * @return Result: the current zero position in LSB (0-16383).
    */
-  [[nodiscard]] uint16_t GetZeroPosition(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<uint16_t> GetZeroPosition(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Set a new zero reference position (soft offset).
@@ -362,10 +393,11 @@ public:
                            uint8_t retries = AS5047U_CFG::CRC_RETRIES);
 
   /** @brief Read whether the adaptive filter is enabled. */
-  [[nodiscard]] bool GetAdaptiveFilterEnabled(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
+  [[nodiscard]] Result<bool> GetAdaptiveFilterEnabled(
+      uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /** @brief Read current K_min and K_max register codes (0–7 each). */
-  [[nodiscard]] std::pair<uint8_t, uint8_t> GetFilterParameters(
+  [[nodiscard]] Result<std::pair<uint8_t, uint8_t>> GetFilterParameters(
       uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /** @brief Set temperature mode for 150°C operation (NOISESET bit).
@@ -448,9 +480,11 @@ public:
 
   /**
    * @brief Get current incremental output hysteresis setting.
-   * @return Current Hysteresis enum value (0b00–0b11).
+   * @return Result: current Hysteresis enum value (0b00–0b11); error set on a
+   * failed read.
    */
-  AS5047U_REG::SETTINGS3::Hysteresis GetHysteresis() const;
+  [[nodiscard]] Result<AS5047U_REG::SETTINGS3::Hysteresis> GetHysteresis(
+      uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Select which angle register (0x3FFF) is returned on reads.
@@ -466,31 +500,37 @@ public:
 
   /**
    * @brief Get currently selected angle output source for 0x3FFF reads.
-   * @return AngleOutputSource enum indicating ANGLECOM or ANGLEUNC.
+   * @return Result: the AngleOutputSource (ANGLECOM or ANGLEUNC); error set on a
+   * failed read.
    */
-  AS5047U_REG::SETTINGS2::AngleOutputSource GetAngleOutputSource() const;
+  [[nodiscard]] Result<AS5047U_REG::SETTINGS2::AngleOutputSource> GetAngleOutputSource(
+      uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Read the full diagnostic register (DIA).
-   * @return DIA register struct containing per-bit calibration and status
-   * flags.
+   * @param retries Number of retries on a failed read (default 0 = no retry).
+   * @return Result: DIA register struct containing per-bit calibration and
+   * status flags (error set on a failed read).
    */
-  AS5047U_REG::DIA GetDiagnostics() const;
+  [[nodiscard]] Result<AS5047U_REG::DIA> GetDiagnostics(
+      uint8_t retries = AS5047U_CFG::CRC_RETRIES) const;
 
   /**
    * @brief Reads data from a specified register in the AS5047U sensor
    *
    * @tparam RegT The register type which must have an ADDRESS static member and
    * be decodable
-   * @return RegT The register object populated with the data read from the
-   * sensor
+   * @param retries Number of retries on a failed read (default 0 = no retry)
+   * @return The register object in Result::value, and in Result::error the
+   * cause when the read failed (value 0 then).
    *
    * This method reads the raw value from the specified register address and
    * decodes it into a strongly-typed register object.
    */
   template <typename RegT>
-  RegT ReadReg() const {
-    return decode<RegT>(readRegister(RegT::ADDRESS));
+  [[nodiscard]] Result<RegT> ReadReg(uint8_t retries = AS5047U_CFG::CRC_RETRIES) const {
+    const Result<uint16_t> raw = readResult(RegT::ADDRESS, retries);
+    return {decode<RegT>(raw.value), raw.error};
   }
 
   /**
@@ -580,18 +620,20 @@ private:
   /// One SPI frame in @p format; @p reply is the 16-bit reply word. False on a bus error, or, with
   /// @p inspect (the reply carries data the caller uses), when the reply's CRC is wrong. The
   /// warning and error bits of every reply with a valid CRC go to the sticky flags.
-  bool transferFrame(FrameFormat format, uint16_t word, uint16_t& reply,
-                     bool inspect = false) const;
+  /// @p cause, when given, receives BusError or ReplyCrcError on a failure.
+  bool transferFrame(FrameFormat format, uint16_t word, uint16_t& reply, bool inspect = false,
+                     AS5047U_Error* cause = nullptr) const;
   /// Read a register (command frame, then a NOP for the reply) without reading ERRFL.
-  bool rawReadRegister(uint16_t addr, uint16_t& value) const;
+  bool rawReadRegister(uint16_t addr, uint16_t& value, AS5047U_Error* cause = nullptr) const;
   /// Read a register, then ERRFL (accumulated into the sticky flags). False on a bus error or when
-  /// the chip reports a CRC or framing error for the access.
-  bool readRegister(uint16_t addr, uint16_t& value) const;
-  uint16_t readRegister(uint16_t addr) const; ///< value only; errors go to the sticky flags
+  /// the chip reports a CRC or framing error for the access; @p cause, when given, says which.
+  bool readRegister(uint16_t addr, uint16_t& value, AS5047U_Error* cause = nullptr) const;
   /// readRegister(), repeated up to @p retries times while it fails. Never consumes the sticky
-  /// flags.
-  bool readWithRetries(uint16_t addr, uint8_t retries, uint16_t& value) const;
-  uint16_t readWithRetries(uint16_t addr, uint8_t retries) const;
+  /// flags. @p cause receives the cause of the last failed attempt.
+  bool readWithRetries(uint16_t addr, uint8_t retries, uint16_t& value,
+                       AS5047U_Error* cause = nullptr) const;
+  /// readWithRetries() as a Result: the value, or the cause of the last failed attempt.
+  Result<uint16_t> readResult(uint16_t addr, uint8_t retries) const;
   /// Write a register and check the read-back (datasheet Figure 30). With @p verify false (a PROG
   /// command, whose content changes on its own), the write succeeds when the frames went through
   /// and the following ERRFL read shows no CRC, framing or command error.
