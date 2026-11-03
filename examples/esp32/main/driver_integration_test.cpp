@@ -129,10 +129,20 @@ static bool test_angle_reading() noexcept {
     return false;
   }
 
-  uint16_t angle = g_encoder->GetAngle();
+  const auto angle_r = g_encoder->GetAngle();
+  if (!angle_r) {
+    ESP_LOGE(TAG, "GetAngle() failed (error 0x%04X)", static_cast<uint16_t>(angle_r.error));
+    return false;
+  }
+  uint16_t angle = angle_r.value;
   ESP_LOGI(TAG, "Angle (compensated): %u (%.2f°)", angle, angle * 360.0 / 16384.0);
 
-  uint16_t raw_angle = g_encoder->GetRawAngle();
+  const auto raw_angle_r = g_encoder->GetRawAngle();
+  if (!raw_angle_r) {
+    ESP_LOGE(TAG, "GetRawAngle() failed (error 0x%04X)", static_cast<uint16_t>(raw_angle_r.error));
+    return false;
+  }
+  uint16_t raw_angle = raw_angle_r.value;
   ESP_LOGI(TAG, "Angle (raw): %u (%.2f°)", raw_angle, raw_angle * 360.0 / 16384.0);
 
   ESP_LOGI(TAG, "Angle reading test passed");
@@ -148,7 +158,12 @@ static bool test_angle_multiple_reads() noexcept {
   }
 
   for (int i = 0; i < 10; ++i) {
-    uint16_t angle = g_encoder->GetAngle();
+    const auto angle_r = g_encoder->GetAngle();
+    if (!angle_r) {
+      ESP_LOGE(TAG, "GetAngle() failed (error 0x%04X)", static_cast<uint16_t>(angle_r.error));
+      return false;
+    }
+    uint16_t angle = angle_r.value;
     ESP_LOGI(TAG, "Read %d: Angle = %u (%.2f°)", i + 1, angle, angle * 360.0 / 16384.0);
     vTaskDelay(pdMS_TO_TICKS(100));
   }
@@ -171,7 +186,12 @@ static bool test_velocity_reading() noexcept {
 
   // Single read so LSB and derived values are consistent (DS: V_Sens = 24.141 º/s/bit, 14-bit two's complement)
   constexpr float kDegPerLsb = 24.141f;
-  int16_t velocity = g_encoder->GetVelocity();
+  const auto velocity_r = g_encoder->GetVelocity();
+  if (!velocity_r) {
+    ESP_LOGE(TAG, "GetVelocity() failed (error 0x%04X)", static_cast<uint16_t>(velocity_r.error));
+    return false;
+  }
+  int16_t velocity = velocity_r.value;
   float vel_deg = velocity * kDegPerLsb;
   float vel_rad = vel_deg * 3.14159265f / 180.0f;
   float vel_rpm = vel_deg * (60.0f / 360.0f);
@@ -207,13 +227,28 @@ static bool test_diagnostics() noexcept {
     return false;
   }
 
-  uint8_t agc = g_encoder->GetAGC();
+  const auto agc_r = g_encoder->GetAGC();
+  if (!agc_r) {
+    ESP_LOGE(TAG, "GetAGC() failed (error 0x%04X)", static_cast<uint16_t>(agc_r.error));
+    return false;
+  }
+  uint8_t agc = agc_r.value;
   ESP_LOGI(TAG, "AGC: %u", agc);
 
-  uint16_t magnitude = g_encoder->GetMagnitude();
+  const auto magnitude_r = g_encoder->GetMagnitude();
+  if (!magnitude_r) {
+    ESP_LOGE(TAG, "GetMagnitude() failed (error 0x%04X)", static_cast<uint16_t>(magnitude_r.error));
+    return false;
+  }
+  uint16_t magnitude = magnitude_r.value;
   ESP_LOGI(TAG, "Magnitude: %u", magnitude);
 
-  uint16_t error_flags = g_encoder->GetErrorFlags();
+  const auto error_flags_r = g_encoder->GetErrorFlags();
+  if (!error_flags_r) {
+    ESP_LOGE(TAG, "GetErrorFlags() failed (error 0x%04X)", static_cast<uint16_t>(error_flags_r.error));
+    return false;
+  }
+  uint16_t error_flags = error_flags_r.value;
   ESP_LOGI(TAG, "Error flags: 0x%04X", error_flags);
 
   AS5047U_Error sticky_errors = g_encoder->GetStickyErrorFlags();
@@ -238,7 +273,12 @@ static bool test_zero_position() noexcept {
   }
 
   // Save the original zero position
-  uint16_t original_zero = g_encoder->GetZeroPosition();
+  const auto original_zero_r = g_encoder->GetZeroPosition();
+  if (!original_zero_r) {
+    ESP_LOGE(TAG, "GetZeroPosition() failed (error 0x%04X)", static_cast<uint16_t>(original_zero_r.error));
+    return false;
+  }
+  uint16_t original_zero = original_zero_r.value;
   ESP_LOGI(TAG, "Original zero position: %u", original_zero);
 
   // Write a test value and verify read-back
@@ -247,13 +287,23 @@ static bool test_zero_position() noexcept {
   ESP_LOGI(TAG, "SetZeroPosition(%u) returned: %s", test_zero, write_ok ? "OK" : "FAIL");
 
   vTaskDelay(pdMS_TO_TICKS(1)); // Allow write to settle
-  uint16_t readback_zero = g_encoder->GetZeroPosition();
+  const auto readback_zero_r = g_encoder->GetZeroPosition();
+  if (!readback_zero_r) {
+    ESP_LOGE(TAG, "GetZeroPosition() failed (error 0x%04X)", static_cast<uint16_t>(readback_zero_r.error));
+    return false;
+  }
+  uint16_t readback_zero = readback_zero_r.value;
   ESP_LOGI(TAG, "Read-back zero position: %u (expected %u)", readback_zero, test_zero);
 
   // Restore original value
   g_encoder->SetZeroPosition(original_zero);
   vTaskDelay(pdMS_TO_TICKS(1));
-  uint16_t restored_zero = g_encoder->GetZeroPosition();
+  const auto restored_zero_r = g_encoder->GetZeroPosition();
+  if (!restored_zero_r) {
+    ESP_LOGE(TAG, "GetZeroPosition() failed (error 0x%04X)", static_cast<uint16_t>(restored_zero_r.error));
+    return false;
+  }
+  uint16_t restored_zero = restored_zero_r.value;
   ESP_LOGI(TAG, "Restored zero position: %u (original %u)", restored_zero, original_zero);
 
   if (!write_ok) {
@@ -282,7 +332,11 @@ static bool test_direction() noexcept {
   }
 
   // Read SETTINGS2 to get original DIR bit
-  auto s2_orig = g_encoder->ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2_orig{};
+  if (!g_encoder->ReadReg(s2_orig)) {
+    ESP_LOGE(TAG, "SETTINGS2 read failed");
+    return false;
+  }
   uint8_t original_dir = s2_orig.bits.DIR;
   ESP_LOGI(TAG, "Original direction (DIR bit): %u", original_dir);
 
@@ -291,7 +345,11 @@ static bool test_direction() noexcept {
   ESP_LOGI(TAG, "SetDirection(clockwise) returned: %s", ok_cw ? "OK" : "FAIL");
 
   vTaskDelay(pdMS_TO_TICKS(1));
-  auto s2_cw = g_encoder->ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2_cw{};
+  if (!g_encoder->ReadReg(s2_cw)) {
+    ESP_LOGE(TAG, "SETTINGS2 read failed");
+    return false;
+  }
   ESP_LOGI(TAG, "DIR bit after clockwise: %u (expected 0)", s2_cw.bits.DIR);
 
   // Set counter-clockwise (DIR=1) and verify
@@ -299,7 +357,11 @@ static bool test_direction() noexcept {
   ESP_LOGI(TAG, "SetDirection(counter-clockwise) returned: %s", ok_ccw ? "OK" : "FAIL");
 
   vTaskDelay(pdMS_TO_TICKS(1));
-  auto s2_ccw = g_encoder->ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2_ccw{};
+  if (!g_encoder->ReadReg(s2_ccw)) {
+    ESP_LOGE(TAG, "SETTINGS2 read failed");
+    return false;
+  }
   ESP_LOGI(TAG, "DIR bit after counter-clockwise: %u (expected 1)", s2_ccw.bits.DIR);
 
   // Restore original direction
@@ -342,7 +404,12 @@ static bool test_frame_format_16() noexcept {
 
   auto encoder_16 =
       std::make_unique<as5047u::AS5047U<Esp32As5047uSpiBus>>(*g_bus, FrameFormat::SPI_16);
-  uint16_t angle = encoder_16->GetAngle();
+  const auto angle_r = encoder_16->GetAngle();
+  if (!angle_r) {
+    ESP_LOGE(TAG, "GetAngle() failed (error 0x%04X)", static_cast<uint16_t>(angle_r.error));
+    return false;
+  }
+  uint16_t angle = angle_r.value;
   ESP_LOGI(TAG, "16-bit frame format: Angle = %u", angle);
 
   ESP_LOGI(TAG, "16-bit frame format test passed");
@@ -359,7 +426,12 @@ static bool test_frame_format_24() noexcept {
 
   auto encoder_24 =
       std::make_unique<as5047u::AS5047U<Esp32As5047uSpiBus>>(*g_bus, FrameFormat::SPI_24);
-  uint16_t angle = encoder_24->GetAngle();
+  const auto angle_r = encoder_24->GetAngle();
+  if (!angle_r) {
+    ESP_LOGE(TAG, "GetAngle() failed (error 0x%04X)", static_cast<uint16_t>(angle_r.error));
+    return false;
+  }
+  uint16_t angle = angle_r.value;
   ESP_LOGI(TAG, "24-bit frame format: Angle = %u", angle);
 
   ESP_LOGI(TAG, "24-bit frame format test passed");
@@ -376,7 +448,12 @@ static bool test_frame_format_32() noexcept {
 
   auto encoder_32 =
       std::make_unique<as5047u::AS5047U<Esp32As5047uSpiBus>>(*g_bus, FrameFormat::SPI_32);
-  uint16_t angle = encoder_32->GetAngle();
+  const auto angle_r = encoder_32->GetAngle();
+  if (!angle_r) {
+    ESP_LOGE(TAG, "GetAngle() failed (error 0x%04X)", static_cast<uint16_t>(angle_r.error));
+    return false;
+  }
+  uint16_t angle = angle_r.value;
   ESP_LOGI(TAG, "32-bit frame format: Angle = %u", angle);
 
   ESP_LOGI(TAG, "32-bit frame format test passed");
@@ -449,7 +526,12 @@ static bool test_error_handling() noexcept {
   }
 
   // Test error flag reading
-  uint16_t error_flags = g_encoder->GetErrorFlags();
+  const auto error_flags_r = g_encoder->GetErrorFlags();
+  if (!error_flags_r) {
+    ESP_LOGE(TAG, "GetErrorFlags() failed (error 0x%04X)", static_cast<uint16_t>(error_flags_r.error));
+    return false;
+  }
+  uint16_t error_flags = error_flags_r.value;
   ESP_LOGI(TAG, "Error flags: 0x%04X", error_flags);
 
   // Test sticky error flags

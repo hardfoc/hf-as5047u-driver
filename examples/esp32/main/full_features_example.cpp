@@ -72,20 +72,36 @@ extern "C" void app_main(void) {
   // Main reading loop
   while (true) {
     // Read angle
-    uint16_t angle = encoder.GetAngle();
-    uint16_t raw_angle = encoder.GetRawAngle();
-    float angle_deg = angle * 360.0f / 16384.0f;
-    ESP_LOGI(TAG, "Angle: %u (%.2f°), Raw: %u", angle, angle_deg, raw_angle);
+    // Every getter returns a Result: .value, and .error (None when the read worked).
+    const auto angle = encoder.GetAngle();
+    const auto raw_angle = encoder.GetRawAngle();
+    if (angle.ok() && raw_angle.ok()) {
+      float angle_deg = angle.value * 360.0f / 16384.0f;
+      ESP_LOGI(TAG, "Angle: %u (%.2f°), Raw: %u", angle.value, angle_deg, raw_angle.value);
+    } else {
+      ESP_LOGW(TAG, "Angle read failed (error 0x%04X / 0x%04X)",
+               static_cast<uint16_t>(angle.error), static_cast<uint16_t>(raw_angle.error));
+    }
 
     // Read velocity
-    float vel_deg = encoder.GetVelocityDegPerSec();
-    float vel_rpm = encoder.GetVelocityRPM();
-    ESP_LOGI(TAG, "Velocity: %.2f deg/s, %.2f RPM", vel_deg, vel_rpm);
+    const auto vel_deg = encoder.GetVelocityDegPerSec();
+    const auto vel_rpm = encoder.GetVelocityRPM();
+    if (vel_deg.ok() && vel_rpm.ok()) {
+      ESP_LOGI(TAG, "Velocity: %.2f deg/s, %.2f RPM", vel_deg.value, vel_rpm.value);
+    } else {
+      ESP_LOGW(TAG, "Velocity read failed (error 0x%04X / 0x%04X)",
+               static_cast<uint16_t>(vel_deg.error), static_cast<uint16_t>(vel_rpm.error));
+    }
 
     // Read diagnostics
-    uint8_t agc = encoder.GetAGC();
-    uint16_t mag = encoder.GetMagnitude();
-    ESP_LOGI(TAG, "AGC: %u, Magnitude: %u", agc, mag);
+    const auto agc = encoder.GetAGC();
+    const auto mag = encoder.GetMagnitude();
+    if (agc.ok() && mag.ok()) {
+      ESP_LOGI(TAG, "AGC: %u, Magnitude: %u", agc.value, mag.value);
+    } else {
+      ESP_LOGW(TAG, "AGC/magnitude read failed (error 0x%04X / 0x%04X)",
+               static_cast<uint16_t>(agc.error), static_cast<uint16_t>(mag.error));
+    }
 
     // Check for errors
     AS5047U_Error errors = encoder.ClearStickyErrorFlags(); // report each flag once
