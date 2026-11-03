@@ -6,8 +6,29 @@ All notable changes to this driver are listed here. The format follows
 
 ## [Unreleased]
 
+### Breaking
+
+- Every value getter returns `as5047u::Result<T>` (`value`, `error`, `ok()`, explicit `operator bool`) instead of the
+  bare value: `GetAngle()`, `GetAngle(AngleUnit)`, `GetAngleDegrees()`, `GetAngleRadians()`, `GetRawAngle()`,
+  `GetVelocity()`, `GetVelocity(VelocityUnit)`, `GetVelocityDegPerSec()`, `GetVelocityRadPerSec()`,
+  `GetVelocityRPM()`, `GetAGC()`, `GetMagnitude()`, `GetErrorFlags()`, `GetZeroPosition()`,
+  `GetAdaptiveFilterEnabled()`, `GetFilterParameters()`, `GetHysteresis()`, `GetAngleOutputSource()`,
+  `GetDiagnostics()` and `ReadReg<T>()`. A failed read used to come back as 0 (or, through a cached caller, as the
+  previous value) with the cause only in the sticky flags; now `error` carries it (`BusError`, `ReplyCrcError`, or
+  the `CrcError` / `FramingError` the chip reported in ERRFL for the access) and `value` is 0 and must not be used.
+  `GetErrorFlags()` keeps the OR of every ERRFL value it read in `value` and sets `error` only when no read went
+  through. `GetHysteresis()`, `GetAngleOutputSource()`, `GetDiagnostics()` and `ReadReg<T>()` take an optional
+  `retries` argument. No deprecated bare-value overloads are kept: they would have to return 0 on a failure, which
+  is the silent error this change removes, and C++ cannot overload on the return type. Migration: `x =
+  enc.GetAngle()` becomes `const auto r = enc.GetAngle(); if (!r) { /* r.error */ } x = r.value;`; for registers,
+  `ReadReg(reg, retries)` (unchanged, returns `bool`) or `ReadReg<T>().value`.
+- A register read whose ERRFL shows a CRC or framing error for the access now leaves 0 in `ReadReg(reg)`'s `reg`
+  (it kept the data the chip had flagged), matching the documented "value 0 when the read failed".
+
 ### Added
 
+- `as5047u::Result<T>`, the return type of the value getters (see Breaking). `DumpStatus()` prints "read failed"
+  with the cause for a read that failed instead of a 0.
 - Host unit tests (`-DHF_AS5047U_BUILD_TESTS=ON`) against a model of the AS5047U SPI slave, and a CI workflow.
 
 ### Changed
