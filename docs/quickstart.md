@@ -51,6 +51,8 @@ What each step does:
    after power-on (at most 10 ms); `MagHalf_flag` is set when the field is too weak.
 3. `GetAngleDegrees(2)` reads ANGLECOM and repeats the read up to two times if the chip reports a CRC or framing
    error. `GetVelocityRPM()` and `GetAGC()` read VEL and AGC.
+4. Every getter returns an `as5047u::Result`: the reading in `.value` and, when the read failed, the cause in
+   `.error`. Check it before using the value; a failed read is never reported as 0 or as the previous value.
 
 This example is built by the host CI, so it compiles against the current headers.
 

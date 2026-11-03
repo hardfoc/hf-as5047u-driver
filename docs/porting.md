@@ -64,11 +64,11 @@ and optional logging of every frame. Start from it for any ESP-IDF target.
 
 1. Build it: the port on this page is compiled by the host CI from [`tests/docs/`](../tests/docs/my_spi.hpp), with
    the driver instantiated over it (`template class as5047u::AS5047U<MySpi>;`).
-2. Read DIA with `GetDiagnostics()`: `LoopsFinished` = 1 and a plausible `VDD_mode` prove that reads work.
+2. Read DIA with `GetDiagnostics()`: the result must be `ok()`, and `LoopsFinished` = 1 and a plausible `VDD_mode` prove that reads work.
 3. Read ERRFL with `GetErrorFlags()` twice: the second read should be 0. A persistent `Framing_error` or
    `CRC_error` points at the mode, CSn handling or the frame length.
 4. Write a setting and read it back: `SetDirection(false)` must return `true`, and `ReadReg<AS5047U_REG::SETTINGS2>()`
-   must show `DIR` = 1.
+   must succeed (`.ok()`) and show `DIR` = 1 in `.value.bits`.
 5. On a logic analyzer, the read of ANGLECOM in `SPI_24` mode is `7F FF BD` (`0xBD` is the CRC of `0x7FFF`), followed by
    the NOP `40 00 1B`.
 
