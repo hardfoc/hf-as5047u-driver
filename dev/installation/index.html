@@ -1138,7 +1138,7 @@ header) and requires C++20 (<code>cxx_std_20</code>), so your target does not ne
 </tbody>
 </table>
 <h2 id="esp-idf">ESP-IDF<a class="headerlink" href="#esp-idf" title="Permanent link">&para;</a></h2>
-<p>The ESP-IDF component wrapper is <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/</code></a>.
+<p>The ESP-IDF component wrapper is <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/</code></a>.
 Copy that folder into your project's <code>components/</code> (or point <code>EXTRA_COMPONENT_DIRS</code> at it) and set the
 <code>HF_AS5047U_ROOT</code> cache variable to the driver checkout; the wrapper stops with a clear message when the path is
 wrong. Your component then declares <code>REQUIRES hf_as5047u</code>. The wrapper itself requires <code>driver</code> and <code>freertos</code>.</p>
@@ -1154,24 +1154,24 @@ wrong. Your component then declares <code>REQUIRES hf_as5047u</code>. The wrappe
 <tbody>
 <tr>
 <td>Settings</td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/cmake/hf_as5047u_build_settings.cmake"><code>cmake/hf_as5047u_build_settings.cmake</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/cmake/hf_as5047u_build_settings.cmake"><code>cmake/hf_as5047u_build_settings.cmake</code></a></td>
 <td>Target name, include directories, version: the single source of truth</td>
 </tr>
 <tr>
 <td>Library</td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/CMakeLists.txt"><code>CMakeLists.txt</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/CMakeLists.txt"><code>CMakeLists.txt</code></a></td>
 <td>Interface library, install and package export</td>
 </tr>
 <tr>
 <td>ESP-IDF</td>
-<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/CMakeLists.txt</code></a></td>
+<td><a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/examples/esp32/components/hf_as5047u/CMakeLists.txt"><code>examples/esp32/components/hf_as5047u/CMakeLists.txt</code></a></td>
 <td>IDF component wrapper over the same settings</td>
 </tr>
 </tbody>
 </table>
 <p>The version is set once in the settings file and written into <code>as5047u_version.h</code> at configure time. A build
 that does not go through CMake must generate that header from
-<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/inc/as5047u_version.h.in"><code>inc/as5047u_version.h.in</code></a> itself. Read the version at run time:</p>
+<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/inc/as5047u_version.h.in"><code>inc/as5047u_version.h.in</code></a> itself. Read the version at run time:</p>
 <div class="language-cpp highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">as5047u</span><span class="o">::</span><span class="n">AS5047U</span><span class="o">&lt;</span><span class="n">MySpi</span><span class="o">&gt;::</span><span class="n">GetDriverVersion</span><span class="p">();</span><span class="w">   </span><span class="c1">// "1.0.0"</span>
 </span></code></pre></div>
 <h2 id="compile-time-switches">Compile-time switches<a class="headerlink" href="#compile-time-switches" title="Permanent link">&para;</a></h2>

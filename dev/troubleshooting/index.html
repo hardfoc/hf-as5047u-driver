@@ -1188,8 +1188,9 @@ registers in one go, and tells transport problems (all zeros, all ones) apart fr
 </tbody>
 </table>
 <h2 id="crc-or-framing-errors">CRC or framing errors<a class="headerlink" href="#crc-or-framing-errors" title="Permanent link">&para;</a></h2>
-<p><code>CrcError</code> or <code>FramingError</code> in the sticky flags or in <code>GetErrorFlags()</code> (the chip saw a bad MOSI frame), or
-<code>ReplyCrcError</code> in the sticky flags (the driver saw a bad MISO frame).</p>
+<p><code>CrcError</code> or <code>FramingError</code> in the sticky flags, in <code>GetErrorFlags()</code> or in a getter's <code>Result::error</code> (the
+chip saw a bad MOSI frame), or <code>ReplyCrcError</code> (the driver saw a bad MISO frame). <code>BusError</code> in a getter's
+<code>Result::error</code> means the port's <code>transfer()</code> returned <code>false</code>.</p>
 <table>
 <thead>
 <tr>

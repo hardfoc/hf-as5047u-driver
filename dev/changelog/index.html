@@ -889,6 +889,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1009,6 +1020,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breaking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1105,8 +1127,29 @@
 <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a> and the project uses
 <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="breaking">Breaking<a class="headerlink" href="#breaking" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Every value getter returns <code>as5047u::Result&lt;T&gt;</code> (<code>value</code>, <code>error</code>, <code>ok()</code>, explicit <code>operator bool</code>) instead of the
+  bare value: <code>GetAngle()</code>, <code>GetAngle(AngleUnit)</code>, <code>GetAngleDegrees()</code>, <code>GetAngleRadians()</code>, <code>GetRawAngle()</code>,
+  <code>GetVelocity()</code>, <code>GetVelocity(VelocityUnit)</code>, <code>GetVelocityDegPerSec()</code>, <code>GetVelocityRadPerSec()</code>,
+  <code>GetVelocityRPM()</code>, <code>GetAGC()</code>, <code>GetMagnitude()</code>, <code>GetErrorFlags()</code>, <code>GetZeroPosition()</code>,
+  <code>GetAdaptiveFilterEnabled()</code>, <code>GetFilterParameters()</code>, <code>GetHysteresis()</code>, <code>GetAngleOutputSource()</code>,
+  <code>GetDiagnostics()</code> and <code>ReadReg&lt;T&gt;()</code>. A failed read used to come back as 0 (or, through a cached caller, as the
+  previous value) with the cause only in the sticky flags; now <code>error</code> carries it (<code>BusError</code>, <code>ReplyCrcError</code>, or
+  the <code>CrcError</code> / <code>FramingError</code> the chip reported in ERRFL for the access) and <code>value</code> is 0 and must not be used.
+  <code>GetErrorFlags()</code> keeps the OR of every ERRFL value it read in <code>value</code> and sets <code>error</code> only when no read went
+  through. <code>GetHysteresis()</code>, <code>GetAngleOutputSource()</code>, <code>GetDiagnostics()</code> and <code>ReadReg&lt;T&gt;()</code> take an optional
+  <code>retries</code> argument. No deprecated bare-value overloads are kept: they would have to return 0 on a failure, which
+  is the silent error this change removes, and C++ cannot overload on the return type. Migration: <code>x =
+  enc.GetAngle()</code> becomes <code>const auto r = enc.GetAngle(); if (!r) { /* r.error */ } x = r.value;</code>; for registers,
+  <code>ReadReg(reg, retries)</code> (unchanged, returns <code>bool</code>) or <code>ReadReg&lt;T&gt;().value</code>.</li>
+<li>A register read whose ERRFL shows a CRC or framing error for the access now leaves 0 in <code>ReadReg(reg)</code>'s <code>reg</code>
+  (it kept the data the chip had flagged), matching the documented "value 0 when the read failed".</li>
+</ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
+<li><code>as5047u::Result&lt;T&gt;</code>, the return type of the value getters (see Breaking). <code>DumpStatus()</code> prints "read failed"
+  with the cause for a read that failed instead of a 0.</li>
 <li>Host unit tests (<code>-DHF_AS5047U_BUILD_TESTS=ON</code>) against a model of the AS5047U SPI slave, and a CI workflow.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>

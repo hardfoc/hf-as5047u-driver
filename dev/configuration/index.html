@@ -1197,10 +1197,10 @@
 <p>All settings live in the non-volatile register block (0x0015 to 0x001B). Writes go to the volatile copy and are
 lost at power-off unless you burn them (<a href="../otp/">OTP programming</a>). A chip that was never programmed starts with
 every register at <code>0x0000</code>, which gives the defaults below. Every snippet here is compiled from
-<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/tests/docs/configuration.cpp"><code>tests/docs/configuration.cpp</code></a>.</p>
+<a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/tests/docs/configuration.cpp"><code>tests/docs/configuration.cpp</code></a>.</p>
 <h2 id="compile-time-defaults">Compile-time defaults<a class="headerlink" href="#compile-time-defaults" title="Permanent link">&para;</a></h2>
 <p>Define these for the whole build (for example <code>target_compile_definitions(my_app PRIVATE CONFIG_AS5047U_FRAME_24)</code>,
-or in your <code>sdkconfig.h</code>); <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/inc/as5047u_config.hpp"><code>inc/as5047u_config.hpp</code></a> reads them.</p>
+or in your <code>sdkconfig.h</code>); <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/inc/as5047u_config.hpp"><code>inc/as5047u_config.hpp</code></a> reads them.</p>
 <table>
 <thead>
 <tr>

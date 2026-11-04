@@ -1127,7 +1127,7 @@
 <h1 id="porting">Porting<a class="headerlink" href="#porting" title="Permanent link">&para;</a></h1>
 <p>Run the driver on a new MCU by writing one class with one method: the SPI transfer.</p>
 <p>The driver never calls your SDK directly. It calls <code>transfer()</code> on a class you derive from
-<code>as5047u::SpiInterface&lt;Self&gt;</code> (in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a>). The base
+<code>as5047u::SpiInterface&lt;Self&gt;</code> (in <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a>). The base
 class uses CRTP: the call is resolved at compile time, so there are no virtual functions, no vtable and nothing to
 allocate.</p>
 <figure class="hf-figure">
@@ -1138,7 +1138,7 @@ allocate.</p>
 <details class="hf-figure-desc">
 <summary>Figure description and sources</summary>
 <p>From top to bottom. Your application talks to one AS5047U<SpiType> object. Its methods read and write the chip's typed registers (listed from inc/as5047u_registers.hpp), build 16-, 24- or 32-bit frames with CRC, check writes by reading them back and collect the ERRFL error flags. The SPI interface (SpiInterface in inc/as5047u_spi_interface.hpp) is a CRTP base with one method. The platform port is the only code you write: a class whose transfer() moves one frame over SPI with chip select held low and returns false on a bus error. Below it is the hardware.</p>
-<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
+<p>Drawn from: <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/inc/as5047u_registers.hpp"><code>inc/as5047u_registers.hpp</code></a> <code>register structs</code>; <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/inc/as5047u_spi_interface.hpp"><code>inc/as5047u_spi_interface.hpp</code></a> <code>SpiInterface</code>; figure module <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/docs/diagrams/figures/driver-layers.py"><code>docs/diagrams/figures/driver-layers.py</code></a>.</p>
 </details>
 <h2 id="what-you-implement">What you implement<a class="headerlink" href="#what-you-implement" title="Permanent link">&para;</a></h2>
 <table>
@@ -1191,18 +1191,18 @@ value, 0 for a failed read) report it. A read-modify-write setter whose read fai
 <code>esp_err_t</code> (where 0 is success) cannot be read as <code>false</code>. A port written for the earlier contract, with a <code>void</code>
 <code>transfer()</code>, still compiles; the driver treats it as never failing.</p>
 <h2 id="reference-implementation">Reference implementation<a class="headerlink" href="#reference-implementation" title="Permanent link">&para;</a></h2>
-<p>The ESP32 examples use <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/examples/esp32/main/esp32_as5047u_bus.hpp"><code>esp32_as5047u_bus.hpp</code></a>: an ESP-IDF
+<p>The ESP32 examples use <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/examples/esp32/main/esp32_as5047u_bus.hpp"><code>esp32_as5047u_bus.hpp</code></a>: an ESP-IDF
 <code>spi_master</code> device in mode 1 with hardware chip select (<code>spics_io_num</code>), one <code>spi_device_transmit()</code> per frame,
 and optional logging of every frame. Start from it for any ESP-IDF target.</p>
 <h2 id="check-your-port">Check your port<a class="headerlink" href="#check-your-port" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Build it: the port on this page is compiled by the host CI from <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/407f1fcfc6a0936c2ffb68096eb81a434ce478b2/tests/docs/my_spi.hpp"><code>tests/docs/</code></a>, with
+<li>Build it: the port on this page is compiled by the host CI from <a href="https://github.com/hardfoc/hf-as5047u-driver/blob/2dd4fb7e775342dcd00ab3ef161704338fe3bfb2/tests/docs/my_spi.hpp"><code>tests/docs/</code></a>, with
    the driver instantiated over it (<code>template class as5047u::AS5047U&lt;MySpi&gt;;</code>).</li>
-<li>Read DIA with <code>GetDiagnostics()</code>: <code>LoopsFinished</code> = 1 and a plausible <code>VDD_mode</code> prove that reads work.</li>
+<li>Read DIA with <code>GetDiagnostics()</code>: the result must be <code>ok()</code>, and <code>LoopsFinished</code> = 1 and a plausible <code>VDD_mode</code> prove that reads work.</li>
 <li>Read ERRFL with <code>GetErrorFlags()</code> twice: the second read should be 0. A persistent <code>Framing_error</code> or
    <code>CRC_error</code> points at the mode, CSn handling or the frame length.</li>
 <li>Write a setting and read it back: <code>SetDirection(false)</code> must return <code>true</code>, and <code>ReadReg&lt;AS5047U_REG::SETTINGS2&gt;()</code>
-   must show <code>DIR</code> = 1.</li>
+   must succeed (<code>.ok()</code>) and show <code>DIR</code> = 1 in <code>.value.bits</code>.</li>
 <li>On a logic analyzer, the read of ANGLECOM in <code>SPI_24</code> mode is <code>7F FF BD</code> (<code>0xBD</code> is the CRC of <code>0x7FFF</code>), followed by
    the NOP <code>40 00 1B</code>.</li>
 </ol>
