@@ -60,6 +60,7 @@ takes the driver as a template parameter too.
 | --- | --- | --- |
 | `as5047u::AS5047U<SpiType>` | The driver | `inc/as5047u.hpp` |
 | `as5047u::SpiInterface<Derived>` | The port's base class | `inc/as5047u_spi_interface.hpp` |
+| `as5047u::Result<T>` | What every value getter returns: `value` and `error` | `inc/as5047u.hpp` |
 | `as5047u::AngleUnit`, `as5047u::VelocityUnit` | Units for `GetAngle()` and `GetVelocity()` | `inc/as5047u.hpp` |
 | `FrameFormat`, `FilterPreset` | Global enums | `inc/as5047u_types.hpp` |
 | `AS5047U_Error` | Global enum of ERRFL flags | `inc/as5047u.hpp` |

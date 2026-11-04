@@ -34,102 +34,123 @@ void AS5047U<SpiType>::SetFrameFormat(FrameFormat format) noexcept {
 //                                 PUBLIC HIGH-LEVEL API
 // ══════════════════════════════════════════════════════════════════════════════════════════
 
+namespace detail {
+/// Result<T> with @p fn applied to the value; the error, and the value-initialised T of a failed
+/// read, are kept.
+template <typename U, typename T, typename Fn>
+constexpr Result<U> MapResult(const Result<T>& r, Fn&& fn) {
+  if (!r.ok()) {
+    return {U{}, r.error};
+  }
+  return {static_cast<U>(fn(r.value)), AS5047U_Error::None};
+}
+} // namespace detail
+
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::GetAngle(uint8_t retries) const {
-  return decode<AS5047U_REG::ANGLECOM>(readWithRetries(AS5047U_REG::ANGLECOM::ADDRESS, retries))
-      .bits.ANGLECOM_value;
+Result<uint16_t> AS5047U<SpiType>::GetAngle(uint8_t retries) const {
+  return detail::MapResult<uint16_t>(ReadReg<AS5047U_REG::ANGLECOM>(retries),
+                                     [](const auto& r) { return r.bits.ANGLECOM_value; });
 }
 
 template <typename SpiType>
-float AS5047U<SpiType>::GetAngle(AngleUnit unit, uint8_t retries) const {
+Result<float> AS5047U<SpiType>::GetAngle(AngleUnit unit, uint8_t retries) const {
   switch (unit) {
-    case AngleUnit::Lsb:
-      return static_cast<float>(GetAngle(retries));
     case AngleUnit::Degrees:
       return GetAngleDegrees(retries);
     case AngleUnit::Radians:
       return GetAngleRadians(retries);
+    case AngleUnit::Lsb:
     default:
-      return static_cast<float>(GetAngle(retries));
+      return detail::MapResult<float>(GetAngle(retries),
+                                      [](uint16_t v) { return static_cast<float>(v); });
   }
 }
 
 template <typename SpiType>
-float AS5047U<SpiType>::GetAngleDegrees(uint8_t retries) const {
-  return static_cast<float>(GetAngle(retries)) * Angle::DEG_PER_LSB;
+Result<float> AS5047U<SpiType>::GetAngleDegrees(uint8_t retries) const {
+  return detail::MapResult<float>(
+      GetAngle(retries), [](uint16_t v) { return static_cast<float>(v) * Angle::DEG_PER_LSB; });
 }
 
 template <typename SpiType>
-float AS5047U<SpiType>::GetAngleRadians(uint8_t retries) const {
-  return static_cast<float>(GetAngle(retries)) * Angle::RAD_PER_LSB;
+Result<float> AS5047U<SpiType>::GetAngleRadians(uint8_t retries) const {
+  return detail::MapResult<float>(
+      GetAngle(retries), [](uint16_t v) { return static_cast<float>(v) * Angle::RAD_PER_LSB; });
 }
 
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::GetRawAngle(uint8_t retries) const {
-  return decode<AS5047U_REG::ANGLEUNC>(readWithRetries(AS5047U_REG::ANGLEUNC::ADDRESS, retries))
-      .bits.ANGLEUNC_value;
+Result<uint16_t> AS5047U<SpiType>::GetRawAngle(uint8_t retries) const {
+  return detail::MapResult<uint16_t>(ReadReg<AS5047U_REG::ANGLEUNC>(retries),
+                                     [](const auto& r) { return r.bits.ANGLEUNC_value; });
 }
 
 template <typename SpiType>
-int16_t AS5047U<SpiType>::GetVelocity(uint8_t retries) const {
-  const auto v =
-      decode<AS5047U_REG::VEL>(readWithRetries(AS5047U_REG::VEL::ADDRESS, retries)).bits.VEL_value;
-  return static_cast<int16_t>((static_cast<int16_t>(v << 2)) >> 2);
+Result<int16_t> AS5047U<SpiType>::GetVelocity(uint8_t retries) const {
+  return detail::MapResult<int16_t>(ReadReg<AS5047U_REG::VEL>(retries), [](const auto& r) {
+    const auto v = r.bits.VEL_value;
+    return static_cast<int16_t>((static_cast<int16_t>(v << 2)) >> 2);
+  });
 }
 
 template <typename SpiType>
-float AS5047U<SpiType>::GetVelocity(VelocityUnit unit, uint8_t retries) const {
+Result<float> AS5047U<SpiType>::GetVelocity(VelocityUnit unit, uint8_t retries) const {
   switch (unit) {
-    case VelocityUnit::Lsb:
-      return static_cast<float>(GetVelocity(retries));
     case VelocityUnit::DegPerSec:
       return GetVelocityDegPerSec(retries);
     case VelocityUnit::RadPerSec:
       return GetVelocityRadPerSec(retries);
     case VelocityUnit::Rpm:
       return GetVelocityRPM(retries);
+    case VelocityUnit::Lsb:
     default:
-      return static_cast<float>(GetVelocity(retries));
+      return detail::MapResult<float>(GetVelocity(retries),
+                                      [](int16_t v) { return static_cast<float>(v); });
   }
 }
 
 template <typename SpiType>
-float AS5047U<SpiType>::GetVelocityDegPerSec(uint8_t retries) const {
-  return GetVelocity(retries) * Velocity::DEG_PER_LSB;
+Result<float> AS5047U<SpiType>::GetVelocityDegPerSec(uint8_t retries) const {
+  return detail::MapResult<float>(GetVelocity(retries),
+                                  [](int16_t v) { return v * Velocity::DEG_PER_LSB; });
 }
 
 template <typename SpiType>
-float AS5047U<SpiType>::GetVelocityRadPerSec(uint8_t retries) const {
-  return GetVelocity(retries) * Velocity::RAD_PER_LSB;
+Result<float> AS5047U<SpiType>::GetVelocityRadPerSec(uint8_t retries) const {
+  return detail::MapResult<float>(GetVelocity(retries),
+                                  [](int16_t v) { return v * Velocity::RAD_PER_LSB; });
 }
 
 template <typename SpiType>
-float AS5047U<SpiType>::GetVelocityRPM(uint8_t retries) const {
-  return GetVelocity(retries) * Velocity::RPM_PER_LSB;
+Result<float> AS5047U<SpiType>::GetVelocityRPM(uint8_t retries) const {
+  return detail::MapResult<float>(GetVelocity(retries),
+                                  [](int16_t v) { return v * Velocity::RPM_PER_LSB; });
 }
 
 template <typename SpiType>
-uint8_t AS5047U<SpiType>::GetAGC(uint8_t retries) const {
-  return decode<AS5047U_REG::AGC>(readWithRetries(AS5047U_REG::AGC::ADDRESS, retries))
-      .bits.AGC_value;
+Result<uint8_t> AS5047U<SpiType>::GetAGC(uint8_t retries) const {
+  return detail::MapResult<uint8_t>(ReadReg<AS5047U_REG::AGC>(retries),
+                                    [](const auto& r) { return r.bits.AGC_value; });
 }
 
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::GetMagnitude(uint8_t retries) const {
-  return decode<AS5047U_REG::MAG>(readWithRetries(AS5047U_REG::MAG::ADDRESS, retries))
-      .bits.MAG_value;
+Result<uint16_t> AS5047U<SpiType>::GetMagnitude(uint8_t retries) const {
+  return detail::MapResult<uint16_t>(ReadReg<AS5047U_REG::MAG>(retries),
+                                     [](const auto& r) { return r.bits.MAG_value; });
 }
 
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::GetErrorFlags(uint8_t retries) const {
+Result<uint16_t> AS5047U<SpiType>::GetErrorFlags(uint8_t retries) const {
   // ERRFL clears when read, so a retry is only made when the read itself failed (bus error); every
   // value read is ORed into the result and, by readRegister(), into the sticky flags.
-  uint16_t flags = 0;
+  Result<uint16_t> flags{0U, AS5047U_Error::None};
   for (uint8_t i = 0; i <= retries; ++i) {
     uint16_t val = 0;
-    const bool ok = readRegister(AS5047U_REG::ERRFL::ADDRESS, val);
-    flags |= val;
+    AS5047U_Error cause = AS5047U_Error::None;
+    const bool ok = readRegister(AS5047U_REG::ERRFL::ADDRESS, val, &cause);
+    flags.value = static_cast<uint16_t>(flags.value | val);
+    flags.error = cause;
     if (ok) {
+      flags.error = AS5047U_Error::None;
       break;
     }
   }
@@ -137,14 +158,17 @@ uint16_t AS5047U<SpiType>::GetErrorFlags(uint8_t retries) const {
 }
 
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::GetZeroPosition(uint8_t retries) const {
-  const uint8_t m =
-      decode<AS5047U_REG::ZPOSM>(readWithRetries(AS5047U_REG::ZPOSM::ADDRESS, retries))
-          .bits.ZPOSM_bits;
-  const uint8_t l =
-      decode<AS5047U_REG::ZPOSL>(readWithRetries(AS5047U_REG::ZPOSL::ADDRESS, retries))
-          .bits.ZPOSL_bits;
-  return static_cast<uint16_t>((m << 6) | l);
+Result<uint16_t> AS5047U<SpiType>::GetZeroPosition(uint8_t retries) const {
+  const auto m = ReadReg<AS5047U_REG::ZPOSM>(retries);
+  if (!m.ok()) {
+    return {0U, m.error};
+  }
+  const auto l = ReadReg<AS5047U_REG::ZPOSL>(retries);
+  if (!l.ok()) {
+    return {0U, l.error};
+  }
+  return {static_cast<uint16_t>((m.value.bits.ZPOSM_bits << 6) | l.value.bits.ZPOSL_bits),
+          AS5047U_Error::None};
 }
 
 template <typename SpiType>
@@ -286,17 +310,19 @@ bool AS5047U<SpiType>::SetFilterPreset(FilterPreset preset, uint8_t retries) {
 }
 
 template <typename SpiType>
-bool AS5047U<SpiType>::GetAdaptiveFilterEnabled(uint8_t retries) const {
-  const auto dis =
-      decode<AS5047U_REG::DISABLE>(readWithRetries(AS5047U_REG::DISABLE::ADDRESS, retries));
-  return (dis.bits.FILTER_disable == 0);
+Result<bool> AS5047U<SpiType>::GetAdaptiveFilterEnabled(uint8_t retries) const {
+  return detail::MapResult<bool>(ReadReg<AS5047U_REG::DISABLE>(retries),
+                                 [](const auto& r) { return r.bits.FILTER_disable == 0; });
 }
 
 template <typename SpiType>
-std::pair<uint8_t, uint8_t> AS5047U<SpiType>::GetFilterParameters(uint8_t retries) const {
-  const auto s1 =
-      decode<AS5047U_REG::SETTINGS1>(readWithRetries(AS5047U_REG::SETTINGS1::ADDRESS, retries));
-  return {static_cast<uint8_t>(s1.bits.K_min), static_cast<uint8_t>(s1.bits.K_max)};
+Result<std::pair<uint8_t, uint8_t>> AS5047U<SpiType>::GetFilterParameters(uint8_t retries) const {
+  const auto s1 = ReadReg<AS5047U_REG::SETTINGS1>(retries);
+  if (!s1.ok()) {
+    return {{0U, 0U}, s1.error};
+  }
+  return {{static_cast<uint8_t>(s1.value.bits.K_min), static_cast<uint8_t>(s1.value.bits.K_max)},
+          AS5047U_Error::None};
 }
 
 template <typename SpiType>
@@ -508,9 +534,10 @@ bool AS5047U<SpiType>::SetHysteresis(AS5047U_REG::SETTINGS3::Hysteresis hysteres
 }
 
 template <typename SpiType>
-AS5047U_REG::SETTINGS3::Hysteresis AS5047U<SpiType>::GetHysteresis() const {
-  auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
-  return static_cast<AS5047U_REG::SETTINGS3::Hysteresis>(s3.bits.HYS);
+Result<AS5047U_REG::SETTINGS3::Hysteresis> AS5047U<SpiType>::GetHysteresis(uint8_t retries) const {
+  using Hysteresis = AS5047U_REG::SETTINGS3::Hysteresis;
+  return detail::MapResult<Hysteresis>(ReadReg<AS5047U_REG::SETTINGS3>(retries),
+                                       [](const auto& r) { return static_cast<Hysteresis>(r.bits.HYS); });
 }
 
 template <typename SpiType>
@@ -525,14 +552,17 @@ bool AS5047U<SpiType>::SetAngleOutputSource(AS5047U_REG::SETTINGS2::AngleOutputS
 }
 
 template <typename SpiType>
-AS5047U_REG::SETTINGS2::AngleOutputSource AS5047U<SpiType>::GetAngleOutputSource() const {
-  auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
-  return static_cast<AS5047U_REG::SETTINGS2::AngleOutputSource>(s2.bits.Data_select);
+Result<AS5047U_REG::SETTINGS2::AngleOutputSource>
+AS5047U<SpiType>::GetAngleOutputSource(uint8_t retries) const {
+  using Source = AS5047U_REG::SETTINGS2::AngleOutputSource;
+  return detail::MapResult<Source>(ReadReg<AS5047U_REG::SETTINGS2>(retries), [](const auto& r) {
+    return static_cast<Source>(r.bits.Data_select);
+  });
 }
 
 template <typename SpiType>
-AS5047U_REG::DIA AS5047U<SpiType>::GetDiagnostics() const {
-  return this->template ReadReg<AS5047U_REG::DIA>();
+Result<AS5047U_REG::DIA> AS5047U<SpiType>::GetDiagnostics(uint8_t retries) const {
+  return ReadReg<AS5047U_REG::DIA>(retries);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════════
@@ -559,7 +589,7 @@ AS5047U_REG::DIA AS5047U<SpiType>::GetDiagnostics() const {
 // reply the driver discards is not enforced (its bits are then not recorded either).
 template <typename SpiType>
 bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t& reply,
-                                     bool inspect) const {
+                                     bool inspect, AS5047U_Error* cause) const {
   uint8_t tx[4] = {};
   uint8_t rx[4] = {};
   std::size_t len = 2;
@@ -579,6 +609,9 @@ bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t
   if (!detail::Transfer(spi_, tx, rx, len)) {
     sticky_errors_.fetch_or(static_cast<uint16_t>(AS5047U_Error::BusError));
     reply = 0;
+    if (cause != nullptr) {
+      *cause = AS5047U_Error::BusError;
+    }
     return false;
   }
   reply = static_cast<uint16_t>((static_cast<uint16_t>(rx[0]) << 8) | rx[1]);
@@ -593,6 +626,9 @@ bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t
   }
   if (inspect && !crc_ok) {
     sticky_errors_.fetch_or(static_cast<uint16_t>(AS5047U_Error::ReplyCrcError));
+    if (cause != nullptr) {
+      *cause = AS5047U_Error::ReplyCrcError;
+    }
     return false;
   }
   return true;
@@ -601,11 +637,13 @@ bool AS5047U<SpiType>::transferFrame(FrameFormat format, uint16_t word, uint16_t
 // Register read without the ERRFL read. DS: "the data is transmitted on MISO with the next read
 // command" (Figure 29), so the read command is followed by a NOP whose reply carries the data.
 template <typename SpiType>
-bool AS5047U<SpiType>::rawReadRegister(uint16_t address, uint16_t& value) const {
+bool AS5047U<SpiType>::rawReadRegister(uint16_t address, uint16_t& value,
+                                       AS5047U_Error* cause) const {
   uint16_t reply = 0;
-  const bool ok =
-      transferFrame(frame_format_, static_cast<uint16_t>(kReadBit | (address & 0x3FFF)), reply) &&
-      transferFrame(frame_format_, kReadBit | AS5047U_REG::NOP::ADDRESS, reply, true);
+  const bool ok = transferFrame(frame_format_, static_cast<uint16_t>(kReadBit | (address & 0x3FFF)),
+                                reply, false, cause) &&
+                  transferFrame(frame_format_, kReadBit | AS5047U_REG::NOP::ADDRESS, reply, true,
+                                cause);
   value = ok ? static_cast<uint16_t>(reply & 0x3FFF) : 0U;
   return ok;
 }
@@ -615,8 +653,9 @@ bool AS5047U<SpiType>::rawReadRegister(uint16_t address, uint16_t& value) const 
 // time would return 0 and lose the flags. True when every frame went through and, for a register
 // other than ERRFL, the chip reported no CRC or framing error for the access.
 template <typename SpiType>
-bool AS5047U<SpiType>::readRegister(uint16_t address, uint16_t& value) const {
-  if (!rawReadRegister(address, value)) {
+bool AS5047U<SpiType>::readRegister(uint16_t address, uint16_t& value,
+                                    AS5047U_Error* cause) const {
+  if (!rawReadRegister(address, value, cause)) {
     return false;
   }
   if (address == AS5047U_REG::ERRFL::ADDRESS) {
@@ -624,24 +663,31 @@ bool AS5047U<SpiType>::readRegister(uint16_t address, uint16_t& value) const {
     return true;
   }
   uint16_t err = 0;
-  if (!rawReadRegister(AS5047U_REG::ERRFL::ADDRESS, err)) {
+  if (!rawReadRegister(AS5047U_REG::ERRFL::ADDRESS, err, cause)) {
+    value = 0;
     return false;
   }
   updateStickyErrors(err);
-  return (err & kRetryMask) == 0U;
+  if ((err & kRetryMask) != 0U) {
+    // The chip rejected the access (ERRFL bits 4 and 6 are the FramingError and CrcError bits):
+    // the value is not a reading.
+    value = 0;
+    if (cause != nullptr) {
+      *cause = static_cast<AS5047U_Error>(err & kRetryMask);
+    }
+    return false;
+  }
+  return true;
 }
 
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::readRegister(uint16_t address) const {
-  uint16_t value = 0;
-  (void)readRegister(address, value);
-  return value;
-}
-
-template <typename SpiType>
-bool AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries, uint16_t& value) const {
+bool AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries, uint16_t& value,
+                                       AS5047U_Error* cause) const {
   for (uint8_t i = 0; i <= retries; ++i) {
-    if (readRegister(address, value)) {
+    if (readRegister(address, value, cause)) {
+      if (cause != nullptr) {
+        *cause = AS5047U_Error::None;
+      }
       return true;
     }
   }
@@ -649,10 +695,10 @@ bool AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries, uint16
 }
 
 template <typename SpiType>
-uint16_t AS5047U<SpiType>::readWithRetries(uint16_t address, uint8_t retries) const {
-  uint16_t value = 0;
-  (void)readWithRetries(address, retries, value);
-  return value;
+Result<uint16_t> AS5047U<SpiType>::readResult(uint16_t address, uint8_t retries) const {
+  Result<uint16_t> r{};
+  (void)readWithRetries(address, retries, r.value, &r.error);
+  return r;
 }
 
 template <typename SpiType>
@@ -693,58 +739,111 @@ bool AS5047U<SpiType>::writeRegister(uint16_t address, uint16_t value, uint8_t r
 //                       Public API: retry-enabled getters and status dump
 // ════════════════════════════════════════════════════════════════════════════════════════════
 
-// Complete dumpStatus with full register dump
+// Complete dumpStatus with full register dump. A read that failed is printed as "read failed"
+// with its cause, never as a value.
 template <typename SpiType>
 void AS5047U<SpiType>::DumpStatus() const {
+  const auto failed = [](AS5047U_Error e) {
+    printf("read failed (error 0x%04X)\n", static_cast<unsigned>(e));
+  };
   printf("\n=== AS5047U Comprehensive Status ===\n");
   // Core measurements
-  printf("Angle (COM) : %u\n", GetAngle());
-  printf("Angle (UNC) : %u\n", GetRawAngle());
-  printf("Velocity    : %d counts (%.3f deg/s, %.3f rad/s, %.3f RPM)\n", GetVelocity(),
-         GetVelocityDegPerSec(), GetVelocityRadPerSec(), GetVelocityRPM());
-  printf("AGC         : %u\n", GetAGC());
-  printf("Magnitude   : %u\n", GetMagnitude());
+  const auto angle = GetAngle();
+  printf("Angle (COM) : ");
+  angle.ok() ? (void)printf("%u\n", angle.value) : failed(angle.error);
+  const auto raw = GetRawAngle();
+  printf("Angle (UNC) : ");
+  raw.ok() ? (void)printf("%u\n", raw.value) : failed(raw.error);
+  const auto vel = GetVelocity();
+  printf("Velocity    : ");
+  if (vel.ok()) {
+    printf("%d counts (%.3f deg/s, %.3f rad/s, %.3f RPM)\n", vel.value,
+           static_cast<double>(vel.value * Velocity::DEG_PER_LSB),
+           static_cast<double>(vel.value * Velocity::RAD_PER_LSB),
+           static_cast<double>(vel.value * Velocity::RPM_PER_LSB));
+  } else {
+    failed(vel.error);
+  }
+  const auto agc = GetAGC();
+  printf("AGC         : ");
+  agc.ok() ? (void)printf("%u\n", agc.value) : failed(agc.error);
+  const auto mag = GetMagnitude();
+  printf("Magnitude   : ");
+  mag.ok() ? (void)printf("%u\n", mag.value) : failed(mag.error);
   // Error flags
-  uint16_t err = GetErrorFlags();
-  printf("ERRFL       : 0x%04X\n", err);
+  const auto err = GetErrorFlags();
+  printf("ERRFL       : ");
+  err.ok() ? (void)printf("0x%04X\n", err.value) : failed(err.error);
   // Diagnostic register bits
-  auto dia = this->template ReadReg<AS5047U_REG::DIA>();
-  printf("DIA (0x3FF5): 0x%04X\n", dia.value);
-  printf("  VDD_mode         : %u\n", dia.bits.VDD_mode);
-  printf("  LoopsFinished    : %u\n", dia.bits.LoopsFinished);
-  printf("  CORDIC_overflow  : %u\n", dia.bits.CORDIC_overflow_flag);
-  printf("  Comp_l           : %u\n", dia.bits.Comp_l);
-  printf("  Comp_h           : %u\n", dia.bits.Comp_h);
-  printf("  MagHalf_flag     : %u\n", dia.bits.MagHalf_flag);
-  printf("  CosOff_fin       : %u\n", dia.bits.CosOff_fin);
-  printf("  SinOff_fin       : %u\n", dia.bits.SinOff_fin);
-  printf("  OffComp_finished : %u\n", dia.bits.OffComp_finished);
-  printf("  AGC_finished     : %u\n", dia.bits.AGC_finished);
-  printf("  SPI_cnt          : %u\n", dia.bits.SPI_cnt);
+  const auto dia_r = this->template ReadReg<AS5047U_REG::DIA>();
+  printf("DIA (0x3FF5): ");
+  if (dia_r.ok()) {
+    const auto& dia = dia_r.value;
+    printf("0x%04X\n", dia.value);
+    printf("  VDD_mode         : %u\n", dia.bits.VDD_mode);
+    printf("  LoopsFinished    : %u\n", dia.bits.LoopsFinished);
+    printf("  CORDIC_overflow  : %u\n", dia.bits.CORDIC_overflow_flag);
+    printf("  Comp_l           : %u\n", dia.bits.Comp_l);
+    printf("  Comp_h           : %u\n", dia.bits.Comp_h);
+    printf("  MagHalf_flag     : %u\n", dia.bits.MagHalf_flag);
+    printf("  CosOff_fin       : %u\n", dia.bits.CosOff_fin);
+    printf("  SinOff_fin       : %u\n", dia.bits.SinOff_fin);
+    printf("  OffComp_finished : %u\n", dia.bits.OffComp_finished);
+    printf("  AGC_finished     : %u\n", dia.bits.AGC_finished);
+    printf("  SPI_cnt          : %u\n", dia.bits.SPI_cnt);
+  } else {
+    failed(dia_r.error);
+  }
   // Configuration registers
-  auto dis = this->template ReadReg<AS5047U_REG::DISABLE>();
-  printf("DISABLE (0x0015): 0x%04X UVW_off=%u ABI_off=%u FILTER_disable=%u\n", dis.value,
-         dis.bits.UVW_off, dis.bits.ABI_off, dis.bits.FILTER_disable);
-  auto s1 = this->template ReadReg<AS5047U_REG::SETTINGS1>();
-  printf("SETTINGS1(0x0016): K_max=%u K_min=%u Dia3_en=%u Dia4_en=%u\n", s1.bits.K_max,
-         s1.bits.K_min, s1.bits.Dia3_en, s1.bits.Dia4_en);
-  auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
-  printf("SETTINGS2(0x0019): IWIDTH=%u NOISESET=%u DIR=%u UVW_ABI=%u "
-         "DAECDIS=%u ABI_DEC=%u "
-         "Data_select=%u PWMon=%u\n",
-         s2.bits.IWIDTH, s2.bits.NOISESET, s2.bits.DIR, s2.bits.UVW_ABI, s2.bits.DAECDIS,
-         s2.bits.ABI_DEC, s2.bits.Data_select, s2.bits.PWMon);
-  auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
-  printf("SETTINGS3(0x001A): UVWPP=%u HYS=%u ABIRES=%u\n", s3.bits.UVWPP, s3.bits.HYS,
-         s3.bits.ABIRES);
+  const auto dis = this->template ReadReg<AS5047U_REG::DISABLE>();
+  printf("DISABLE (0x0015): ");
+  if (dis.ok()) {
+    printf("0x%04X UVW_off=%u ABI_off=%u FILTER_disable=%u\n", dis.value.value,
+           dis.value.bits.UVW_off, dis.value.bits.ABI_off, dis.value.bits.FILTER_disable);
+  } else {
+    failed(dis.error);
+  }
+  const auto s1 = this->template ReadReg<AS5047U_REG::SETTINGS1>();
+  printf("SETTINGS1(0x0016): ");
+  if (s1.ok()) {
+    printf("K_max=%u K_min=%u Dia3_en=%u Dia4_en=%u\n", s1.value.bits.K_max, s1.value.bits.K_min,
+           s1.value.bits.Dia3_en, s1.value.bits.Dia4_en);
+  } else {
+    failed(s1.error);
+  }
+  const auto s2 = this->template ReadReg<AS5047U_REG::SETTINGS2>();
+  printf("SETTINGS2(0x0019): ");
+  if (s2.ok()) {
+    const auto& b = s2.value.bits;
+    printf("IWIDTH=%u NOISESET=%u DIR=%u UVW_ABI=%u DAECDIS=%u ABI_DEC=%u Data_select=%u "
+           "PWMon=%u\n",
+           b.IWIDTH, b.NOISESET, b.DIR, b.UVW_ABI, b.DAECDIS, b.ABI_DEC, b.Data_select, b.PWMon);
+  } else {
+    failed(s2.error);
+  }
+  const auto s3 = this->template ReadReg<AS5047U_REG::SETTINGS3>();
+  printf("SETTINGS3(0x001A): ");
+  if (s3.ok()) {
+    printf("UVWPP=%u HYS=%u ABIRES=%u\n", s3.value.bits.UVWPP, s3.value.bits.HYS,
+           s3.value.bits.ABIRES);
+  } else {
+    failed(s3.error);
+  }
   // Other registers
-  auto sind = this->template ReadReg<AS5047U_REG::SINDATA>();
-  printf("SINDATA(0x3FFA): %d\n", sind.bits.SINDATA);
-  auto eccsum = this->template ReadReg<AS5047U_REG::ECC_Checksum>();
-  printf("ECC_Checksum(0x3FD0): %u\n", eccsum.bits.ECC_s);
-  auto prog = this->template ReadReg<AS5047U_REG::PROG>();
-  printf("PROG(0x0003): PROGEN=%u PROGOTP=%u OTPREF=%u PROGVER=%u\n", prog.bits.PROGEN,
-         prog.bits.PROGOTP, prog.bits.OTPREF, prog.bits.PROGVER);
+  const auto sind = this->template ReadReg<AS5047U_REG::SINDATA>();
+  printf("SINDATA(0x3FFA): ");
+  sind.ok() ? (void)printf("%d\n", sind.value.bits.SINDATA) : failed(sind.error);
+  const auto eccsum = this->template ReadReg<AS5047U_REG::ECC_Checksum>();
+  printf("ECC_Checksum(0x3FD0): ");
+  eccsum.ok() ? (void)printf("%u\n", eccsum.value.bits.ECC_s) : failed(eccsum.error);
+  const auto prog = this->template ReadReg<AS5047U_REG::PROG>();
+  printf("PROG(0x0003): ");
+  if (prog.ok()) {
+    printf("PROGEN=%u PROGOTP=%u OTPREF=%u PROGVER=%u\n", prog.value.bits.PROGEN,
+           prog.value.bits.PROGOTP, prog.value.bits.OTPREF, prog.value.bits.PROGVER);
+  } else {
+    failed(prog.error);
+  }
   // Interface settings
   printf("FrameFormat      : %u  PadByte=0x%02X\n", static_cast<uint8_t>(this->frame_format_),
          this->pad_byte_);

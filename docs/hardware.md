@@ -98,7 +98,7 @@ The LDO powers nothing but the chip. Select `NOISESET` with `Set150CTemperatureM
 - OTP programming needs 4.5 V to 5.5 V (5 V mode) or 3.3 V to 3.5 V (3.3 V mode), up to 100 mA, at 5 °C to
   45 °C. See [OTP programming](otp.md).
 
-`GetDiagnostics().bits.VDD_mode` reads 1 in 5 V mode and 0 in 3.3 V mode.
+`GetDiagnostics().value.bits.VDD_mode` reads 1 in 5 V mode and 0 in 3.3 V mode.
 
 ## Magnet
 

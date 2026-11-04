@@ -72,14 +72,24 @@ extern "C" void app_main(void) {
   // Main reading loop
   while (true) {
     // Read angle
-    uint16_t angle = encoder.GetAngle();
-    float angle_deg = angle * 360.0f / 16384.0f;
-    ESP_LOGI(TAG, "Angle: %u (%.2f°)", angle, angle_deg);
+    // Every getter returns a Result: .value, and .error (None when the read worked).
+    const auto angle = encoder.GetAngle();
+    if (angle.ok()) {
+      float angle_deg = angle.value * 360.0f / 16384.0f;
+      ESP_LOGI(TAG, "Angle: %u (%.2f°)", angle.value, angle_deg);
+    } else {
+      ESP_LOGW(TAG, "Angle read failed (error 0x%04X)", static_cast<uint16_t>(angle.error));
+    }
 
     // Read diagnostics
-    uint8_t agc = encoder.GetAGC();
-    uint16_t mag = encoder.GetMagnitude();
-    ESP_LOGI(TAG, "AGC: %u, Magnitude: %u", agc, mag);
+    const auto agc = encoder.GetAGC();
+    const auto mag = encoder.GetMagnitude();
+    if (agc.ok() && mag.ok()) {
+      ESP_LOGI(TAG, "AGC: %u, Magnitude: %u", agc.value, mag.value);
+    } else {
+      ESP_LOGW(TAG, "AGC/magnitude read failed (error 0x%04X / 0x%04X)",
+               static_cast<uint16_t>(agc.error), static_cast<uint16_t>(mag.error));
+    }
 
     // Check for errors
     AS5047U_Error errors = encoder.ClearStickyErrorFlags(); // report each flag once
@@ -99,14 +109,23 @@ static bool check_spi_communication_health(as5047u::AS5047U<Esp32As5047uSpiBus>&
   
   // Test 1: ERRFL should clear after read (self-clearing register)
   // If chip is responding, first read may have value, second should be 0x0000
-  auto errfl1 = encoder.ReadReg<AS5047U_REG::ERRFL>();
+  AS5047U_REG::ERRFL errfl1{};
+  if (!encoder.ReadReg(errfl1)) {
+    ESP_LOGW(TAG, "ERRFL read failed (value shown as 0)");
+  }
   vTaskDelay(pdMS_TO_TICKS(1)); // Small delay
-  auto errfl2 = encoder.ReadReg<AS5047U_REG::ERRFL>();
+  AS5047U_REG::ERRFL errfl2{};
+  if (!encoder.ReadReg(errfl2)) {
+    ESP_LOGW(TAG, "ERRFL read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG, "ERRFL test: first=0x%04X, second=0x%04X (should clear)", errfl1.value, errfl2.value);
   
   // Test 2: DIA register should have VDD_mode bit set if chip is powered
   // Even if chip is uninitialized, VDD_mode should indicate power state
-  auto dia = encoder.ReadReg<AS5047U_REG::DIA>();
+  AS5047U_REG::DIA dia{};
+  if (!encoder.ReadReg(dia)) {
+    ESP_LOGW(TAG, "DIA read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG, "DIA register: 0x%04X (VDD_mode=%u)", dia.value, dia.bits.VDD_mode);
   
   if (dia.value == 0x0000 && errfl1.value == 0x0000 && errfl2.value == 0x0000) {
@@ -164,24 +183,42 @@ static void run_diagnostics(as5047u::AS5047U<Esp32As5047uSpiBus>& encoder) {
   encoder.DumpStatus();
 
   // 2) Read core status/diagnostic registers directly.
-  auto errfl = encoder.ReadReg<AS5047U_REG::ERRFL>();
+  AS5047U_REG::ERRFL errfl{};
+  if (!encoder.ReadReg(errfl)) {
+    ESP_LOGW(TAG, "ERRFL read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG, "ERRFL raw: 0x%04X", errfl.value);
 
-  auto dia = encoder.ReadReg<AS5047U_REG::DIA>();
+  AS5047U_REG::DIA dia{};
+  if (!encoder.ReadReg(dia)) {
+    ESP_LOGW(TAG, "DIA read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG,
            "DIA: 0x%04X (VDD_mode=%u LoopsFinished=%u OffComp_finished=%u AGC_finished=%u "
            "CORDIC_overflow=%u MagHalf_flag=%u)",
            dia.value, dia.bits.VDD_mode, dia.bits.LoopsFinished, dia.bits.OffComp_finished,
            dia.bits.AGC_finished, dia.bits.CORDIC_overflow_flag, dia.bits.MagHalf_flag);
 
-  auto agc_reg = encoder.ReadReg<AS5047U_REG::AGC>();
+  AS5047U_REG::AGC agc_reg{};
+  if (!encoder.ReadReg(agc_reg)) {
+    ESP_LOGW(TAG, "AGC read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG, "AGC register raw: 0x%04X (AGC_value=%u)", agc_reg.value, agc_reg.bits.AGC_value);
 
-  auto mag_reg = encoder.ReadReg<AS5047U_REG::MAG>();
+  AS5047U_REG::MAG mag_reg{};
+  if (!encoder.ReadReg(mag_reg)) {
+    ESP_LOGW(TAG, "MAG read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG, "MAG register raw: 0x%04X (MAG_value=%u)", mag_reg.value, mag_reg.bits.MAG_value);
 
-  auto angle_unc = encoder.ReadReg<AS5047U_REG::ANGLEUNC>();
-  auto angle_com = encoder.ReadReg<AS5047U_REG::ANGLECOM>();
+  AS5047U_REG::ANGLEUNC angle_unc{};
+  if (!encoder.ReadReg(angle_unc)) {
+    ESP_LOGW(TAG, "ANGLEUNC read failed (value shown as 0)");
+  }
+  AS5047U_REG::ANGLECOM angle_com{};
+  if (!encoder.ReadReg(angle_com)) {
+    ESP_LOGW(TAG, "ANGLECOM read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG, "ANGLEUNC raw: 0x%04X (value=%u)", angle_unc.value, angle_unc.bits.ANGLEUNC_value);
   ESP_LOGI(TAG, "ANGLECOM raw: 0x%04X (value=%u)", angle_com.value, angle_com.bits.ANGLECOM_value);
 
@@ -189,7 +226,13 @@ static void run_diagnostics(as5047u::AS5047U<Esp32As5047uSpiBus>& encoder) {
   //    We toggle a few bits and immediately restore the original value.
 
   // SETTINGS2: test NOISESET and PWMon bits.
-  auto s2_orig = encoder.ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2_orig{};
+  if (!encoder.ReadReg(s2_orig)) {
+    // Without the original value there is nothing to toggle and restore: writing it back
+    // would put 0 into the register.
+    ESP_LOGE(TAG, "SETTINGS2 read failed - skipping the write tests");
+    return;
+  }
   ESP_LOGI(TAG, "SETTINGS2 original: 0x%04X", s2_orig.value);
 
   auto s2_test = s2_orig;
@@ -197,7 +240,10 @@ static void run_diagnostics(as5047u::AS5047U<Esp32As5047uSpiBus>& encoder) {
   s2_test.bits.PWMon ^= 1u;
   bool s2_write_ok = encoder.WriteReg(s2_test);
   vTaskDelay(pdMS_TO_TICKS(1)); // Small delay for write to complete
-  auto s2_after = encoder.ReadReg<AS5047U_REG::SETTINGS2>();
+  AS5047U_REG::SETTINGS2 s2_after{};
+  if (!encoder.ReadReg(s2_after)) {
+    ESP_LOGW(TAG, "SETTINGS2 read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG,
            "SETTINGS2 test write ok=%d, written=0x%04X, read-back=0x%04X "
            "(NOISESET=%u PWMon=%u)",
@@ -217,7 +263,13 @@ static void run_diagnostics(as5047u::AS5047U<Esp32As5047uSpiBus>& encoder) {
   }
 
   // DISABLE: toggle ABI_off and UVW_off.
-  auto dis_orig = encoder.ReadReg<AS5047U_REG::DISABLE>();
+  AS5047U_REG::DISABLE dis_orig{};
+  if (!encoder.ReadReg(dis_orig)) {
+    // Without the original value there is nothing to toggle and restore: writing it back
+    // would put 0 into the register.
+    ESP_LOGE(TAG, "DISABLE read failed - skipping the write tests");
+    return;
+  }
   ESP_LOGI(TAG, "DISABLE original: 0x%04X", dis_orig.value);
 
   auto dis_test = dis_orig;
@@ -225,7 +277,10 @@ static void run_diagnostics(as5047u::AS5047U<Esp32As5047uSpiBus>& encoder) {
   dis_test.bits.UVW_off ^= 1u;
   bool dis_write_ok = encoder.WriteReg(dis_test);
   vTaskDelay(pdMS_TO_TICKS(1)); // Small delay for write to complete
-  auto dis_after = encoder.ReadReg<AS5047U_REG::DISABLE>();
+  AS5047U_REG::DISABLE dis_after{};
+  if (!encoder.ReadReg(dis_after)) {
+    ESP_LOGW(TAG, "DISABLE read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG,
            "DISABLE test write ok=%d, written=0x%04X, read-back=0x%04X "
            "(ABI_off=%u UVW_off=%u)",
@@ -244,7 +299,10 @@ static void run_diagnostics(as5047u::AS5047U<Esp32As5047uSpiBus>& encoder) {
   }
 
   // SETTINGS3: read back ABIRES and HYS to confirm they are not stuck at zero.
-  auto s3 = encoder.ReadReg<AS5047U_REG::SETTINGS3>();
+  AS5047U_REG::SETTINGS3 s3{};
+  if (!encoder.ReadReg(s3)) {
+    ESP_LOGW(TAG, "SETTINGS3 read failed (value shown as 0)");
+  }
   ESP_LOGI(TAG, "SETTINGS3: 0x%04X (UVWPP=%u HYS=%u ABIRES=%u)", s3.value, s3.bits.UVWPP,
            s3.bits.HYS, s3.bits.ABIRES);
 

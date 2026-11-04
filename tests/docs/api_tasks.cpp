@@ -19,40 +19,57 @@ void construct(MySpi& spi) {
   // --8<-- [end:construct]
 }
 
-void read(Encoder& encoder) {
+bool read(Encoder& encoder) {
   // --8<-- [start:read]
-  const uint16_t lsb = encoder.GetAngle();      // ANGLECOM, 0..16383 (14 bit)
-  const float deg = encoder.GetAngleDegrees();  // [0, 360)
-  const float rad = encoder.GetAngle(as5047u::AngleUnit::Radians);
-  const uint16_t raw = encoder.GetRawAngle();   // ANGLEUNC: without DAEC
+  // Every getter returns as5047u::Result<T>: .value, and .error (None when the read worked).
+  const auto lsb = encoder.GetAngle();      // ANGLECOM, 0..16383 (14 bit)
+  if (!lsb.ok()) {                          // BusError, ReplyCrcError, CrcError, FramingError
+    std::printf("angle read failed: 0x%04X\n", static_cast<unsigned>(lsb.error));
+    return false;                           // lsb.value is not a reading
+  }
+  const auto deg = encoder.GetAngleDegrees();  // [0, 360)
+  const auto rad = encoder.GetAngle(as5047u::AngleUnit::Radians);
+  const auto raw = encoder.GetRawAngle();   // ANGLEUNC: without DAEC
 
-  const int16_t vel = encoder.GetVelocity();    // signed 14 bit, 24.141 deg/s per LSB
-  const float rpm = encoder.GetVelocity(as5047u::VelocityUnit::Rpm);
+  const auto vel = encoder.GetVelocity();   // signed 14 bit, 24.141 deg/s per LSB
+  const auto rpm = encoder.GetVelocity(as5047u::VelocityUnit::Rpm);
+  if (!deg || !rad || !raw || !vel || !rpm) {
+    return false;
+  }
 
-  std::printf("%u (%.2f deg, %.4f rad) raw %u, vel %d (%.1f rpm)\n", lsb, deg, rad,
-              raw, vel, rpm);
+  std::printf("%u (%.2f deg, %.4f rad) raw %u, vel %d (%.1f rpm)\n", lsb.value,
+              static_cast<double>(deg.value), static_cast<double>(rad.value), raw.value,
+              vel.value, static_cast<double>(rpm.value));
+  return true;
   // --8<-- [end:read]
 }
 
-void diagnostics(Encoder& encoder) {
+bool diagnostics(Encoder& encoder) {
   // --8<-- [start:diagnostics]
-  const uint8_t agc = encoder.GetAGC();         // 0..255; 0 or 255: field out of range
-  const uint16_t mag = encoder.GetMagnitude();  // CORDIC magnitude, kept steady by AGC
-  const auto dia = encoder.GetDiagnostics();    // DIA (0x3FF5)
+  const auto agc = encoder.GetAGC();         // 0..255; 0 or 255: field out of range
+  const auto mag = encoder.GetMagnitude();   // CORDIC magnitude, kept steady by AGC
+  const auto dia = encoder.GetDiagnostics(); // DIA (0x3FF5)
+  if (!agc || !mag || !dia) {
+    return false;                            // a read failed: no diagnostics to show
+  }
 
-  std::printf("AGC %u  MAG %u  5V mode %u  AGC low %u high %u\n", agc, mag,
-              static_cast<unsigned>(dia.bits.VDD_mode),
-              static_cast<unsigned>(dia.bits.Comp_l),
-              static_cast<unsigned>(dia.bits.Comp_h));
+  std::printf("AGC %u  MAG %u  5V mode %u  AGC low %u high %u\n", agc.value, mag.value,
+              static_cast<unsigned>(dia.value.bits.VDD_mode),
+              static_cast<unsigned>(dia.value.bits.Comp_l),
+              static_cast<unsigned>(dia.value.bits.Comp_h));
 
-  encoder.DumpStatus();                         // every register, through printf
+  encoder.DumpStatus();                      // every register, through printf
+  return true;
   // --8<-- [end:diagnostics]
 }
 
 bool errors(Encoder& encoder) {
   // --8<-- [start:errors]
   (void)encoder.ClearStickyErrorFlags();      // start a clean window
-  const uint16_t angle = encoder.GetAngle(2); // then ERRFL; 2 retries on CRC
+  const auto angle = encoder.GetAngle(2);     // then ERRFL; 2 retries on CRC
+  if (!angle.ok()) {
+    return false;  // the read failed; angle.error says why
+  }
   const auto flags = static_cast<uint16_t>(encoder.GetStickyErrorFlags()); // kept until cleared
   if (flags != 0U) {
     if (flags & static_cast<uint16_t>(AS5047U_Error::CrcError)) {
@@ -64,7 +81,7 @@ bool errors(Encoder& encoder) {
     }
     return false;  // do not use this sample
   }
-  std::printf("angle %u\n", static_cast<unsigned>(angle));
+  std::printf("angle %u\n", static_cast<unsigned>(angle.value));
   return true;
   // --8<-- [end:errors]
 }
@@ -72,8 +89,9 @@ bool errors(Encoder& encoder) {
 bool configure(Encoder& encoder) {
   // --8<-- [start:configure]
   using Hys = AS5047U_REG::SETTINGS3::Hysteresis;
-  bool ok = true;
-  ok = ok && encoder.SetZeroPosition(encoder.GetAngle());     // here is 0 degrees
+  const auto here = encoder.GetAngle();
+  bool ok = here.ok();
+  ok = ok && encoder.SetZeroPosition(here.value);             // here is 0 degrees
   ok = ok && encoder.SetDirection(true);          // clockwise (from the top) counts up
   ok = ok && encoder.SetDynamicAngleCompensation(true);       // DAEC on (default)
   ok = ok && encoder.SetFilterPreset(FilterPreset::Balanced); // K = 2..3
@@ -97,16 +115,22 @@ bool outputs(Encoder& encoder) {
 
 bool raw(Encoder& encoder) {
   // --8<-- [start:raw]
-  auto s2 = encoder.ReadReg<AS5047U_REG::SETTINGS2>();  // fields in .bits
+  AS5047U_REG::SETTINGS2 s2{};
+  if (!encoder.ReadReg(s2, 2)) {                        // fields in .bits, 2 retries
+    return false;
+  }
   s2.bits.ABI_DEC = 1;        // decimal ABI counts (1000, 500, ... pulses)
   s2.bits.IWIDTH = 1;         // 1 LSB index pulse
   if (!encoder.WriteReg(s2, 2)) {                       // verified, 2 retries
     return false;
   }
   using Res = AS5047U_REG::SETTINGS3::ABIResolution;
-  auto s3 = encoder.ReadReg<AS5047U_REG::SETTINGS3>();
-  s3.bits.ABIRES = static_cast<uint8_t>(Res::Code0);    // with ABI_DEC: 1000 pulses
-  return encoder.WriteReg(s3);
+  auto s3 = encoder.ReadReg<AS5047U_REG::SETTINGS3>();  // or as a Result<SETTINGS3>
+  if (!s3) {
+    return false;
+  }
+  s3.value.bits.ABIRES = static_cast<uint8_t>(Res::Code0);    // with ABI_DEC: 1000 pulses
+  return encoder.WriteReg(s3.value);
   // --8<-- [end:raw]
 }
 

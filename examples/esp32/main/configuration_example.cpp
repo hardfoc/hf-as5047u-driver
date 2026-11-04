@@ -70,9 +70,13 @@ extern "C" void app_main(void) {
 
   // Main reading loop
   while (true) {
-    uint16_t angle = encoder.GetAngle();
-    float angle_deg = angle * 360.0f / 16384.0f;
-    ESP_LOGI(TAG, "Angle: %u (%.2f°)", angle, angle_deg);
+    const auto angle = encoder.GetAngle();
+    if (angle.ok()) {
+      float angle_deg = angle.value * 360.0f / 16384.0f;
+      ESP_LOGI(TAG, "Angle: %u (%.2f°)", angle.value, angle_deg);
+    } else {
+      ESP_LOGW(TAG, "Angle read failed (error 0x%04X)", static_cast<uint16_t>(angle.error));
+    }
     vTaskDelay(pdMS_TO_TICKS(100));
   }
 }

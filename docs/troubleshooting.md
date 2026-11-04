@@ -17,8 +17,9 @@ registers in one go, and tells transport problems (all zeros, all ones) apart fr
 
 ## CRC or framing errors
 
-`CrcError` or `FramingError` in the sticky flags or in `GetErrorFlags()` (the chip saw a bad MOSI frame), or
-`ReplyCrcError` in the sticky flags (the driver saw a bad MISO frame).
+`CrcError` or `FramingError` in the sticky flags, in `GetErrorFlags()` or in a getter's `Result::error` (the
+chip saw a bad MOSI frame), or `ReplyCrcError` (the driver saw a bad MISO frame). `BusError` in a getter's
+`Result::error` means the port's `transfer()` returned `false`.
 
 | Cause | Fix |
 | --- | --- |

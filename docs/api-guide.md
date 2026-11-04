@@ -29,9 +29,20 @@ One `AS5047U<SpiType>` object per sensor. It offers three levels of access:
 | Bus | `SetFrameFormat()`, `SetPad()`, `ComputeCRC8()` |
 
 Setters return `bool`: `false` means the value did not read back as written, or a frame failed on the bus (the
-port's `transfer()` returned `false`). Measurements return the value (0 when the read failed); their errors are
-reported through the error flags (below). `ReadReg(reg)` reads any register and returns whether the read worked.
-Nothing throws and nothing allocates.
+port's `transfer()` returned `false`). Every value getter (the measurements, `GetDiagnostics()`,
+`GetErrorFlags()`, `GetZeroPosition()`, the filter and output-source getters, and `ReadReg<T>()`) returns an
+`as5047u::Result<T>`: `value` holds the reading and `error` is `AS5047U_Error::None` when the read worked. When it
+failed, `error` holds the cause (`BusError`, `ReplyCrcError`, or the `CrcError` / `FramingError` the chip reported
+in ERRFL for that read) and `value` is 0, which is not a reading. A failed read is never returned as a plain 0 or
+as the previous value. `ok()` (or `if (result)`) tests for success. `ReadReg(reg)` reads any register into `reg`
+and returns whether the read worked. Nothing throws and nothing allocates.
+
+```cpp
+const auto angle = encoder.GetAngle();
+if (!angle) {
+  // angle.error says why; angle.value is not a reading
+}
+```
 
 Every call that takes a `retries` argument (default `AS5047U_CFG::CRC_RETRIES`, 0) repeats the access that many
 times when the chip reports a CRC or framing error.
@@ -72,9 +83,9 @@ a total error of ±5 %.
 | --- | --- | --- |
 | `GetAGC()` | Between 0 and 255, not at either end | 0: field too strong (magnet too close). 255: field too weak |
 | `GetMagnitude()` | Steady while the AGC is in range | Falls when the AGC is at 255 |
-| `dia.bits.LoopsFinished` | 1 | 0: the chip has not finished start-up |
-| `dia.bits.MagHalf_flag` | 0 | 1: magnitude below half its target |
-| `dia.bits.Comp_l`, `Comp_h` | 0 | AGC at its low or high limit |
+| `dia.value.bits.LoopsFinished` | 1 | 0: the chip has not finished start-up |
+| `dia.value.bits.MagHalf_flag` | 0 | 1: magnitude below half its target |
+| `dia.value.bits.Comp_l`, `Comp_h` | 0 | AGC at its low or high limit |
 
 ## Configure
 
@@ -100,8 +111,9 @@ These settings live in volatile registers until you burn them ([OTP programming]
 --8<-- "tests/docs/api_tasks.cpp:raw"
 ```
 
-Each struct in `AS5047U_REG` has `ADDRESS`, a 16-bit `value` and named `bits`. `ReadReg<T>()` reads it (and
-ERRFL); `WriteReg(reg, retries)` writes `value` and checks the read-back. The datasheet's register tables are in
+Each struct in `AS5047U_REG` has `ADDRESS`, a 16-bit `value` and named `bits`. `ReadReg(reg, retries)` reads it
+(and ERRFL) and returns whether the read worked; `ReadReg<T>()` returns it as a `Result<T>` (the register in
+`.value`); `WriteReg(reg, retries)` writes `value` and checks the read-back. The datasheet's register tables are in
 its "Volatile Registers" and "Non-Volatile Registers (OTP)" sections.
 
 ## Handle errors
@@ -117,8 +129,9 @@ what it cleared, in one atomic step.
 ```
 
 The getters decide on a retry from the ERRFL of their own read, so they never consume the sticky flags: the flags
-of every sample stay visible until you clear them. `GetErrorFlags()` returns the chip's ERRFL, which only shows
-what happened since the driver's previous read of it; the sticky flags hold everything since your last clear.
+of every sample stay visible until you clear them. `GetErrorFlags()` returns the chip's ERRFL in `.value`, which
+only shows what happened since the driver's previous read of it (its `.error` is set only when no read of ERRFL
+went through); the sticky flags hold everything since your last clear.
 
 Bits 0 to 10 are the ERRFL bits. Bits 11 and 12 are errors the driver detects itself; bits 13 and 14 are the warning
 and error bits of the chip's replies (bit 15, 14 of a 16-bit frame; datasheet Figures 22, 25 and 28).

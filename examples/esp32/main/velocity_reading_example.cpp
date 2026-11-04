@@ -49,13 +49,20 @@ extern "C" void app_main(void) {
   // Main reading loop
   while (true) {
     // Read velocity in different units
-    float velocity_lsb = encoder.GetVelocity(as5047u::VelocityUnit::Lsb);
-    float vel_deg = encoder.GetVelocity(as5047u::VelocityUnit::DegPerSec);
-    float vel_rad = encoder.GetVelocity(as5047u::VelocityUnit::RadPerSec);
-    float vel_rpm = encoder.GetVelocity(as5047u::VelocityUnit::Rpm);
+    // Every getter returns a Result: .value, and .error (None when the read worked).
+    const auto velocity_lsb = encoder.GetVelocity(as5047u::VelocityUnit::Lsb);
+    const auto vel_deg = encoder.GetVelocity(as5047u::VelocityUnit::DegPerSec);
+    const auto vel_rad = encoder.GetVelocity(as5047u::VelocityUnit::RadPerSec);
+    const auto vel_rpm = encoder.GetVelocity(as5047u::VelocityUnit::Rpm);
 
-    ESP_LOGI(TAG, "Velocity: %.0f LSB, %.2f deg/s, %.2f rad/s, %.2f RPM", velocity_lsb, vel_deg,
-             vel_rad, vel_rpm);
+    if (velocity_lsb.ok() && vel_deg.ok() && vel_rad.ok() && vel_rpm.ok()) {
+      ESP_LOGI(TAG, "Velocity: %.0f LSB, %.2f deg/s, %.2f rad/s, %.2f RPM", velocity_lsb.value,
+               vel_deg.value, vel_rad.value, vel_rpm.value);
+    } else {
+      ESP_LOGW(TAG, "Velocity read failed (error 0x%04X)",
+               static_cast<uint16_t>(velocity_lsb.error) | static_cast<uint16_t>(vel_deg.error) |
+                   static_cast<uint16_t>(vel_rad.error) | static_cast<uint16_t>(vel_rpm.error));
+    }
 
     vTaskDelay(pdMS_TO_TICKS(100));
   }
